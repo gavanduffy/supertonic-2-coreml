@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Supertonic TTS",
+  "short_name": "Supertonic TTS",
+  "description": "Read any article aloud using on-device TTS. Send articles to the Supertonic iOS app.",
+  "version": "1.0.0",
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Supertonic TTS"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["../shared/reader.js", "../shared/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

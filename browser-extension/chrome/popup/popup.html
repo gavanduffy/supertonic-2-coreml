@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supertonic TTS</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="header">
+    <span class="logo">🔊</span>
+    <span class="app-name">Supertonic TTS</span>
+  </div>
+
+  <div id="loading" class="status">Extracting article…</div>
+
+  <div id="article-info" class="hidden">
+    <div class="title" id="page-title"></div>
+    <div class="meta" id="page-meta"></div>
+  </div>
+
+  <div class="controls hidden" id="controls">
+    <div class="row">
+      <label for="voice-select">Voice</label>
+      <select id="voice-select"></select>
+    </div>
+    <div class="row">
+      <label for="rate-range">Speed <span id="rate-label">1.0×</span></label>
+      <input type="range" id="rate-range" min="0.5" max="2.0" step="0.1" value="1.0" />
+    </div>
+    <div class="row">
+      <label for="pitch-range">Pitch <span id="pitch-label">1.0</span></label>
+      <input type="range" id="pitch-range" min="0.5" max="2.0" step="0.1" value="1.0" />
+    </div>
+  </div>
+
+  <div class="actions hidden" id="actions">
+    <button id="btn-play" class="btn primary">▶ Read aloud</button>
+    <button id="btn-stop" class="btn hidden">⏹ Stop</button>
+    <button id="btn-send" class="btn secondary" title="Copy URL and open Supertonic iOS app">
+      📱 Send to iPhone
+    </button>
+  </div>
+
+  <div id="error-msg" class="error hidden"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

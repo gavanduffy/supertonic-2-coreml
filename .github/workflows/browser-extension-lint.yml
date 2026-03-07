@@ -1,0 +1,41 @@
+name: Browser Extension Lint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'browser-extension/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'browser-extension/**'
+
+jobs:
+  lint:
+    name: Lint Chrome Extension
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: browser-extension/chrome/package-lock.json
+
+      - name: Install dependencies
+        working-directory: browser-extension/chrome
+        run: npm ci
+
+      - name: Lint JS with ESLint
+        working-directory: browser-extension/chrome
+        run: npm run lint
+
+      - name: Validate manifest with web-ext
+        working-directory: browser-extension/chrome
+        run: npx web-ext lint --source-dir .

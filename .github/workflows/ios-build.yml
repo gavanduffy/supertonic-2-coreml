@@ -1,0 +1,76 @@
+name: iOS Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build (iOS Simulator)
+    runs-on: macos-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode.app
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # Resolve package dependencies (if any Swift packages are added later).
+      - name: Resolve Swift packages
+        run: |
+          xcodebuild \
+            -project supertonic2-coreml-ios-test.xcodeproj \
+            -scheme "supertonic2-coreml-ios-test" \
+            -resolvePackageDependencies \
+            || true
+
+      # Build for the simulator.  CoreML models are large binaries managed
+      # via Git LFS; the build step uses the project as-is and skips signing
+      # for CI purposes.
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild \
+            -project supertonic2-coreml-ios-test.xcodeproj \
+            -scheme "supertonic2-coreml-ios-test" \
+            -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=YES \
+            clean build \
+            | tee /tmp/xcodebuild.log \
+            | xcpretty --color --simple \
+            || (cat /tmp/xcodebuild.log && exit 1)
+
+      - name: Run unit tests
+        run: |
+          xcodebuild test \
+            -project supertonic2-coreml-ios-test.xcodeproj \
+            -scheme "supertonic2-coreml-ios-testTests" \
+            -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee /tmp/xcodebuild-tests.log \
+            | xcpretty --color --simple \
+            || (cat /tmp/xcodebuild-tests.log && exit 1)
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: /tmp/xcodebuild*.log
+          retention-days: 7
