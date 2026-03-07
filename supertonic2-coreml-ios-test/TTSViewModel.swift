@@ -70,6 +70,7 @@ final class TTSViewModel: ObservableObject {
 
     @Published var isGenerating: Bool = false
     @Published var isPlaying: Bool = false
+    @Published var isPaused: Bool = false
     @Published var isLoadingModels: Bool = false
     @Published var errorMessage: String?
     @Published var metrics: Metrics?
@@ -79,6 +80,12 @@ final class TTSViewModel: ObservableObject {
     @Published var modelLoadReason: ModelLoadReason?
     @Published var modelLoadComputeUnits: TTSService.ComputeUnits?
     @Published var currentLoadReason: ModelLoadReason?
+    /// Current playback title shown in the mini NowPlaying bar.
+    @Published var nowPlayingTitle: String = ""
+    /// Playback progress 0–1.
+    @Published var playbackProgress: Double = 0
+    /// Remaining seconds of current audio.
+    @Published var playbackRemaining: Double = 0
 
     let samples: [SamplePrompt] = [
         SamplePrompt(
@@ -109,6 +116,21 @@ final class TTSViewModel: ObservableObject {
         // Warm-start the app by loading voices and preloading models.
         loadVoices()
         warmUpModels()
+        // Register remote command handlers for lock-screen control.
+        NowPlayingManager.shared.registerCommands(
+            onPlay:  { [weak self] in DispatchQueue.main.async { self?.resumeOrPlay() } },
+            onPause: { [weak self] in DispatchQueue.main.async { self?.pausePlayback() } },
+            onStop:  { [weak self] in DispatchQueue.main.async { self?.stopPlayback() } }
+        )
+        // Wire progress updates from the audio player.
+        player.onProgress = { [weak self] current, total in
+            guard let self, total > 0 else { return }
+            DispatchQueue.main.async {
+                self.playbackProgress = current / total
+                self.playbackRemaining = max(0, total - current)
+                NowPlayingManager.shared.updateElapsed(current)
+            }
+        }
     }
 
     func reloadModels() {
@@ -183,6 +205,7 @@ final class TTSViewModel: ObservableObject {
                     self.isGenerating = false
                     // Save to history.
                     let title = self.sourceURL ?? String(text.prefix(60))
+                    self.nowPlayingTitle = title
                     HistoryManager.shared.add(
                         title: title,
                         text: text,
@@ -203,26 +226,65 @@ final class TTSViewModel: ObservableObject {
 
     func togglePlay() {
         if isPlaying {
-            player.stop()
-            isPlaying = false
+            pausePlayback()
+        } else if isPaused {
+            resumeOrPlay()
+        } else if let url = audioURL {
+            play(url: url)
+        }
+    }
+
+    func stopPlayback() {
+        player.stop()
+        isPlaying = false
+        isPaused = false
+        playbackProgress = 0
+        NowPlayingManager.shared.clear()
+    }
+
+    func pausePlayback() {
+        player.pause()
+        isPlaying = false
+        isPaused = true
+        NowPlayingManager.shared.updateElapsed(player.currentTime, rate: 0)
+    }
+
+    func resumeOrPlay() {
+        if isPaused {
+            player.resume()
+            isPlaying = true
+            isPaused = false
+            NowPlayingManager.shared.updateElapsed(player.currentTime, rate: 1)
         } else if let url = audioURL {
             play(url: url)
         }
     }
 
     /// Play a previously-generated audio file (e.g. from history).
-    func playExisting(url: URL) {
+    func playExisting(url: URL, title: String = "") {
         audioURL = url
+        nowPlayingTitle = title.isEmpty ? "Supertonic TTS" : title
         play(url: url)
     }
 
     private func play(url: URL) {
+        let title = nowPlayingTitle.isEmpty ? "Supertonic TTS" : nowPlayingTitle
         player.play(url: url) { [weak self] in
             DispatchQueue.main.async {
                 self?.isPlaying = false
+                self?.isPaused = false
+                self?.playbackProgress = 0
+                NowPlayingManager.shared.clear()
             }
         }
         isPlaying = true
+        isPaused = false
+        playbackProgress = 0
+        // Update lock-screen metadata.
+        NowPlayingManager.shared.update(
+            title: title,
+            duration: player.duration > 0 ? player.duration : 60
+        )
     }
 
     private func warmUpModels() {

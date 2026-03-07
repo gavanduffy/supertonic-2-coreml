@@ -3,6 +3,7 @@
 //  supertonic2-coreml-ios-test
 //
 //  Tab view for entering a URL, fetching its content, and reading it aloud.
+//  Redesigned with iOS 26 Liquid Glass aesthetics.
 //
 
 import SwiftUI
@@ -15,93 +16,170 @@ struct URLInputView: View {
     @State private var fetchError: String?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Paste a URL and the app will extract the article text and read it to you.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
+        ZStack {
+            LiquidGlassBackground()
 
-                urlInputRow
-
-                if isFetching {
-                    HStack {
-                        ProgressView()
-                        Text("Fetching article…")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                    }
+            ScrollView {
+                VStack(spacing: 16) {
+                    pageHeader
+                    urlCard
+                    if isFetching { fetchingCard }
+                    if let err = fetchError { errorCard(err) }
+                    if !viewModel.text.isEmpty { previewCard }
                 }
-
-                if let err = fetchError {
-                    Text(err)
-                        .foregroundColor(.red)
-                        .font(.footnote)
-                }
-
-                if !viewModel.text.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Extracted text")
-                            .font(.subheadline)
-                        Text(viewModel.text)
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                            .lineLimit(10)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(10)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-
-                    speakButton
-                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 100)
             }
-            .padding()
         }
+        .navigationTitle("")
+        .navigationBarHidden(true)
     }
 
-    private var urlInputRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("URL")
-                .font(.subheadline)
-            HStack {
-                TextField("https://example.com/article", text: $urlString)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .keyboardType(.URL)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+    // MARK: - Header
 
-                Button(action: pasteFromClipboard) {
-                    Image(systemName: "doc.on.clipboard")
+    private var pageHeader: some View {
+        GlassCard {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [.glassAccent2, Color(red: 0.50, green: 0.30, blue: 1.0)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "link.circle.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.white)
                 }
-                .accessibilityLabel("Paste URL from clipboard")
-
-                Button(action: fetchURL) {
-                    Image(systemName: "arrow.down.circle.fill")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Read from URL")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Paste a link and we'll extract the article")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.6))
                 }
-                .disabled(urlString.trimmingCharacters(in: .whitespaces).isEmpty || isFetching)
-                .accessibilityLabel("Fetch article")
+                Spacer()
             }
         }
     }
 
-    private var speakButton: some View {
-        HStack(spacing: 12) {
-            Button(action: { viewModel.generate() }) {
-                HStack {
-                    if viewModel.isGenerating {
-                        ProgressView()
+    // MARK: - URL input card
+
+    private var urlCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                GlassSectionHeader(title: "Article URL", systemImage: "globe")
+
+                GlassDivider()
+
+                GlassTextField(
+                    placeholder: "https://example.com/article",
+                    text: $urlString,
+                    keyboardType: .URL
+                )
+
+                HStack(spacing: 10) {
+                    Button(action: pasteFromClipboard) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "doc.on.clipboard")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Paste URL")
+                        }
                     }
-                    Text(viewModel.isGenerating ? "Generating…" : "▶ Read aloud")
+                    .buttonStyle(GlassSecondaryButtonStyle())
+
+                    Button(action: fetchURL) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Fetch")
+                        }
+                    }
+                    .buttonStyle(GlassPrimaryButtonStyle())
+                    .disabled(urlString.trimmingCharacters(in: .whitespaces).isEmpty || isFetching)
                 }
             }
-            .disabled(viewModel.isGenerating || viewModel.isLoadingModels || viewModel.availableVoices.isEmpty)
-            .buttonStyle(.borderedProminent)
+        }
+    }
 
-            if viewModel.audioURL != nil {
-                Button(action: { viewModel.togglePlay() }) {
-                    Text(viewModel.isPlaying ? "Stop" : "Play again")
+    // MARK: - Fetching indicator
+
+    private var fetchingCard: some View {
+        GlassCard(padding: 14) {
+            HStack(spacing: 12) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .glassAccent))
+                Text("Extracting article text…")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.7))
+                Spacer()
+            }
+        }
+    }
+
+    // MARK: - Error card
+
+    private func errorCard(_ message: String) -> some View {
+        GlassCard(padding: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.glassDanger)
+                Text(message)
+                    .font(.system(size: 13))
+                    .foregroundColor(.glassDanger.opacity(0.9))
+                Spacer()
+            }
+        }
+    }
+
+    // MARK: - Preview card
+
+    private var previewCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                GlassSectionHeader(title: "Extracted Text", systemImage: "doc.plaintext")
+
+                GlassDivider()
+
+                Text(viewModel.text)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.75))
+                    .lineLimit(12)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                GlassDivider()
+
+                HStack(spacing: 12) {
+                    Button(action: { viewModel.generate() }) {
+                        HStack(spacing: 6) {
+                            if viewModel.isGenerating {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.75)
+                            } else {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                            Text(viewModel.isGenerating ? "Generating…" : "Read aloud")
+                        }
+                    }
+                    .buttonStyle(GlassPrimaryButtonStyle())
+                    .disabled(viewModel.isGenerating || viewModel.isLoadingModels || viewModel.availableVoices.isEmpty)
+
+                    if viewModel.audioURL != nil {
+                        Button(action: { viewModel.togglePlay() }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: viewModel.isPlaying ? "pause.fill" : "arrow.clockwise")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text(viewModel.isPlaying ? "Pause" : (viewModel.isPaused ? "Resume" : "Play again"))
+                            }
+                        }
+                        .buttonStyle(GlassSecondaryButtonStyle())
+                    }
                 }
-                .buttonStyle(.bordered)
             }
         }
     }
@@ -114,7 +192,6 @@ struct URLInputView: View {
             if str.hasPrefix("http://") || str.hasPrefix("https://") {
                 urlString = str
             } else {
-                // Treat as plain text — switch to text input
                 viewModel.text = str
             }
         }
