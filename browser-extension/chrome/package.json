@@ -1,0 +1,13 @@
+{
+  "name": "supertonic-tts-chrome-extension",
+  "version": "1.0.0",
+  "description": "Supertonic TTS Chrome extension — reads articles aloud.",
+  "private": true,
+  "scripts": {
+    "lint": "eslint popup/popup.js background.js ../shared/content.js ../shared/reader.js"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "web-ext": "^8.3.0"
+  }
+}

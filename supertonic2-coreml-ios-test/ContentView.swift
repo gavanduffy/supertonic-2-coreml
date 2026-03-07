@@ -11,34 +11,77 @@ struct ContentView: View {
     @StateObject private var viewModel = TTSViewModel()
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
+        TabView {
+            // ── Read tab ────────────────────────────────────────────────
+            NavigationView {
+                ReadView(viewModel: viewModel)
+                    .navigationTitle("Read Aloud")
+            }
+            .tabItem {
+                Label("Read", systemImage: "text.bubble")
+            }
 
-                    if viewModel.isLoadingModels {
-                        ProgressView(viewModel.loadingMessage)
-                    }
+            // ── URL tab ─────────────────────────────────────────────────
+            NavigationView {
+                URLInputView(viewModel: viewModel)
+                    .navigationTitle("URL")
+            }
+            .tabItem {
+                Label("URL", systemImage: "link")
+            }
 
-                    inputSection
-                    controlSection
-                    actionSection
-                    metricsSection
-                    samplesSection
+            // ── History tab ─────────────────────────────────────────────
+            NavigationView {
+                HistoryView(viewModel: viewModel)
+                    .navigationTitle("History")
+            }
+            .tabItem {
+                Label("History", systemImage: "clock.arrow.circlepath")
+            }
 
-                    if let error = viewModel.errorMessage {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .font(.footnote)
-                    }
+            // ── Settings tab ─────────────────────────────────────────────
+            NavigationView {
+                SettingsView(viewModel: viewModel)
+                    .navigationTitle("Settings")
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gearshape")
+            }
+        }
+        .onAppear { viewModel.startup() }
+        .onChange(of: viewModel.computeUnits) { _ in
+            viewModel.reloadModels()
+        }
+    }
+}
+
+// MARK: - Read tab
+
+/// The main "type or paste text and speak" screen.
+struct ReadView: View {
+    @ObservedObject var viewModel: TTSViewModel
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+
+                if viewModel.isLoadingModels {
+                    ProgressView(viewModel.loadingMessage)
                 }
-                .padding()
+
+                inputSection
+                actionSection
+                metricsSection
+                samplesSection
+
+                if let error = viewModel.errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.footnote)
+                }
             }
-            .navigationTitle("Supertonic2 CoreML")
-            .onAppear { viewModel.startup() }
-            .onChange(of: viewModel.computeUnits) { _ in
-                viewModel.reloadModels()
-            }
+            .padding()
         }
     }
 
@@ -54,71 +97,22 @@ struct ContentView: View {
 
     private var inputSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Text")
-                .font(.subheadline)
+            HStack {
+                Text("Text")
+                    .font(.subheadline)
+                Spacer()
+                Button(action: pasteText) {
+                    Label("Paste", systemImage: "doc.on.clipboard")
+                        .font(.footnote)
+                }
+                .accessibilityLabel("Paste text from clipboard")
+            }
             TextEditor(text: $viewModel.text)
                 .frame(minHeight: 140)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.secondary.opacity(0.4))
                 )
-        }
-    }
-
-    private var controlSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Voice")
-                        .font(.subheadline)
-                    Picker("Voice", selection: $viewModel.selectedVoice) {
-                        ForEach(viewModel.availableVoices, id: \.self) { voice in
-                            Text(voice).tag(voice)
-                        }
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                    .disabled(viewModel.availableVoices.isEmpty || viewModel.isGenerating)
-                }
-                Spacer()
-                VStack(alignment: .leading) {
-                    Text("Language")
-                        .font(.subheadline)
-                    Picker("Language", selection: $viewModel.language) {
-                        ForEach(TTSService.Language.allCases) { lang in
-                            Text(lang.displayName).tag(lang)
-                        }
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                }
-            }
-
-            Stepper(value: $viewModel.steps, in: 1...30) {
-                Text("Steps: \(viewModel.steps)")
-            }
-
-            VStack(alignment: .leading) {
-                Text(String(format: "Speed: %.2f", viewModel.speed))
-                    .font(.subheadline)
-                Slider(value: $viewModel.speed, in: 0.75...1.4, step: 0.01)
-            }
-
-            VStack(alignment: .leading) {
-                Text(String(format: "Silence between chunks: %.2fs", viewModel.silenceSeconds))
-                    .font(.subheadline)
-                Slider(value: $viewModel.silenceSeconds, in: 0.0...0.6, step: 0.05)
-            }
-
-            VStack(alignment: .leading) {
-                Text("Compute units")
-                    .font(.subheadline)
-                Picker("Compute units", selection: $viewModel.computeUnits) {
-                    ForEach(TTSService.ComputeUnits.allCases) { unit in
-                        Text(unit.displayName).tag(unit)
-                    }
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .disabled(viewModel.isGenerating || viewModel.isLoadingModels)
-            }
         }
     }
 
@@ -145,9 +139,10 @@ struct ContentView: View {
 
     private var metricsSection: some View {
         Group {
-            VStack(alignment: .leading, spacing: 6) {
-                if let metrics = viewModel.metrics {
-                    Text(String(format: "Audio: %.2fs • Elapsed: %.2fs • RTF: %.2fx", metrics.audioSeconds, metrics.elapsedSeconds, metrics.rtf))
+            if let metrics = viewModel.metrics {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(String(format: "Audio: %.2fs • Elapsed: %.2fs • RTF: %.2fx",
+                                metrics.audioSeconds, metrics.elapsedSeconds, metrics.rtf))
                         .font(.subheadline)
                     Text(String(format: "DP %.2fs • TE %.2fs • VE %.2fs • Voc %.2fs",
                                 metrics.timing.durationPredictor,
@@ -161,14 +156,6 @@ struct ContentView: View {
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
-                }
-
-                if let loadSeconds = viewModel.modelLoadSeconds {
-                    let reason = viewModel.modelLoadReason?.displayName ?? "Load"
-                    let units = viewModel.modelLoadComputeUnits?.displayName ?? "Unknown"
-                    Text(String(format: "Model load (%@, %@): %.2fs", reason, units, loadSeconds))
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -186,5 +173,13 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
             }
         }
+    }
+
+    private func pasteText() {
+        #if canImport(UIKit)
+        if let str = UIPasteboard.general.string {
+            viewModel.text = str
+        }
+        #endif
     }
 }

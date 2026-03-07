@@ -65,6 +65,8 @@ final class TTSViewModel: ObservableObject {
     @Published var speed: Double = 1.05
     @Published var silenceSeconds: Double = 0.3
     @Published var computeUnits: TTSService.ComputeUnits = .all
+    /// The URL that was used to populate the current text (if any).
+    @Published var sourceURL: String?
 
     @Published var isGenerating: Bool = false
     @Published var isPlaying: Bool = false
@@ -179,6 +181,15 @@ final class TTSViewModel: ObservableObject {
                         memoryAfterMB: memAfter
                     )
                     self.isGenerating = false
+                    // Save to history.
+                    let title = self.sourceURL ?? String(text.prefix(60))
+                    HistoryManager.shared.add(
+                        title: title,
+                        text: text,
+                        sourceURL: self.sourceURL,
+                        audioFileURL: result.url,
+                        language: language.rawValue
+                    )
                     self.play(url: result.url)
                 }
             } catch {
@@ -197,6 +208,12 @@ final class TTSViewModel: ObservableObject {
         } else if let url = audioURL {
             play(url: url)
         }
+    }
+
+    /// Play a previously-generated audio file (e.g. from history).
+    func playExisting(url: URL) {
+        audioURL = url
+        play(url: url)
     }
 
     private func play(url: URL) {

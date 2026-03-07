@@ -1,15 +1,35 @@
 # Supertonic-2 CoreML
 
-CoreML‑optimized exports of **Supertonic 2** for iOS and macOS, plus a Swift
-demo app, smoke tests, and packaging scripts for Hugging Face distribution.
+CoreML‑optimized exports of **Supertonic 2** for iOS and macOS, plus a
+fully-featured TTS app, a Chrome browser extension, CI workflows, and
+packaging scripts for Hugging Face distribution.
 
 ## Repository structure
 
-- `supertonic2-coreml-ios-test/`: Swift demo app (CoreML pipeline + UI).
+- `supertonic2-coreml-ios-test/`: Swift iOS app (CoreML TTS pipeline + tab UI).
+- `browser-extension/`: Chrome Manifest V3 extension + shared JS reader.
 - `models/supertonic-2/`: source models, CoreML artifacts, and resources.
 - `scripts/`: conversion, benchmarking, smoke tests, and HF packaging.
-- `docs/`: compatibility and quantization guidance.
+- `docs/`: compatibility, quantization guidance, and [TTS app roadmap](docs/tts-app-roadmap.md).
 - `hf/`: staging bundle for Hugging Face publishing.
+- `.github/workflows/`: CI — iOS build + browser extension lint.
+
+## iOS App — Features
+
+The iOS app now includes four tabs:
+
+| Tab | Description |
+|-----|-------------|
+| **Read** | Type or paste text → Generate → Play |
+| **URL** | Paste any article URL → fetch text → speak |
+| **History** | Replay past readings (saved to disk) |
+| **Settings** | Voice, speed, steps, compute units |
+
+### Paste from clipboard
+
+Both the **Read** and **URL** tabs include a **Paste** button.  If the
+clipboard contains a URL it is placed in the URL field; plain text goes
+directly into the editor.
 
 ## Quickstart (iOS/macOS demo app)
 
@@ -18,8 +38,26 @@ demo app, smoke tests, and packaging scripts for Hugging Face distribution.
    bundled in the app target.
 3. Build and run on device or simulator.
 
-The demo app uses the CoreML pipeline in:
-`supertonic2-coreml-ios-test/TTSService.swift`.
+The CoreML pipeline lives in `supertonic2-coreml-ios-test/TTSService.swift`.
+
+## Browser Extension (Chrome)
+
+See [`browser-extension/README.md`](browser-extension/README.md) for full
+details.  Quick start:
+
+1. Open `chrome://extensions/` → enable **Developer mode**.
+2. **Load unpacked** → select `browser-extension/chrome/`.
+3. Click the 🔊 icon on any news article → **▶ Read aloud**.
+
+The extension also has a **📱 Send to iPhone** button that opens the
+`supertonic-tts://` URL scheme to hand the article off to the iOS app.
+
+## CI / GitHub Actions
+
+| Workflow | Trigger | Runner |
+|----------|---------|--------|
+| `ios-build.yml` | push/PR to `main` | `macos-latest` |
+| `browser-extension-lint.yml` | changes to `browser-extension/` | `ubuntu-latest` |
 
 ## Required files (checklist)
 
