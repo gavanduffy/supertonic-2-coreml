@@ -13,3 +13,4 @@ hf/docs/
 hf/LICENSE
 hf/config.json
 hf_publish/
+node_modules/
