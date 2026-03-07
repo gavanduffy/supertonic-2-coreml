@@ -172,9 +172,9 @@ struct URLInputView: View {
                     if viewModel.audioURL != nil {
                         Button(action: { viewModel.togglePlay() }) {
                             HStack(spacing: 6) {
-                                Image(systemName: viewModel.isPlaying ? "stop.fill" : "arrow.clockwise")
+                                Image(systemName: viewModel.isPlaying ? "pause.fill" : "arrow.clockwise")
                                     .font(.system(size: 13, weight: .semibold))
-                                Text(viewModel.isPlaying ? "Stop" : "Play again")
+                                Text(viewModel.isPlaying ? "Pause" : (viewModel.isPaused ? "Resume" : "Play again"))
                             }
                         }
                         .buttonStyle(GlassSecondaryButtonStyle())

@@ -69,22 +69,19 @@ final class NowPlayingManager {
         let commandCenter = MPRemoteCommandCenter.shared()
 
         commandCenter.playCommand.isEnabled = true
-        commandCenter.playCommand.addTarget { [weak self] _ in
-            guard self != nil else { return .commandFailed }
+        commandCenter.playCommand.addTarget { _ in
             onPlay()
             return .success
         }
 
         commandCenter.pauseCommand.isEnabled = true
-        commandCenter.pauseCommand.addTarget { [weak self] _ in
-            guard self != nil else { return .commandFailed }
+        commandCenter.pauseCommand.addTarget { _ in
             onPause()
             return .success
         }
 
         commandCenter.stopCommand.isEnabled = true
-        commandCenter.stopCommand.addTarget { [weak self] _ in
-            guard self != nil else { return .commandFailed }
+        commandCenter.stopCommand.addTarget { _ in
             onStop()
             return .success
         }

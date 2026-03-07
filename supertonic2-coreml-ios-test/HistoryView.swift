@@ -173,7 +173,7 @@ struct HistoryView: View {
                     // Play button (only if audio file exists)
                     if item.audioURL != nil {
                         Button(action: { replayItem(item) }) {
-                            Image(systemName: viewModel.isPlaying ? "stop.fill" : "play.fill")
+                            Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(width: 36, height: 36)
@@ -186,7 +186,7 @@ struct HistoryView: View {
                                         ))
                                 )
                         }
-                        .accessibilityLabel(viewModel.isPlaying ? "Stop" : "Play")
+                        .accessibilityLabel(viewModel.isPlaying ? "Pause" : "Play")
                     }
 
                     // Delete button
@@ -215,7 +215,7 @@ struct HistoryView: View {
 
     private func replayItem(_ item: HistoryItem) {
         if viewModel.isPlaying {
-            viewModel.togglePlay()
+            viewModel.pausePlayback()
             return
         }
         if let url = item.audioURL {

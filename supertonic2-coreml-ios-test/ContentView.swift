@@ -45,7 +45,7 @@ struct ContentView: View {
             .toolbarColorScheme(.dark, for: .tabBar)
 
             // Mini NowPlaying bar — floats above the tab bar when playing.
-            if viewModel.isPlaying || viewModel.audioURL != nil {
+            if viewModel.isPlaying || viewModel.isPaused || viewModel.audioURL != nil {
                 MiniPlayerBar(viewModel: viewModel)
                     .padding(.horizontal, 12)
                     .padding(.bottom, 58)
@@ -92,6 +92,10 @@ struct MiniPlayerBar: View {
                         Text(timeString(viewModel.playbackRemaining) + " remaining")
                             .font(.system(size: 11))
                             .foregroundColor(.white.opacity(0.55))
+                    } else if viewModel.isPaused {
+                        Text("Paused")
+                            .font(.system(size: 11))
+                            .foregroundColor(.glassAccent.opacity(0.75))
                     } else {
                         Text("Ready to play")
                             .font(.system(size: 11))
@@ -103,7 +107,7 @@ struct MiniPlayerBar: View {
 
                 // Play / Stop button
                 Button(action: { viewModel.togglePlay() }) {
-                    Image(systemName: viewModel.isPlaying ? "stop.fill" : "play.fill")
+                    Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.glassAccent)
                         .frame(width: 40, height: 40)
@@ -113,7 +117,7 @@ struct MiniPlayerBar: View {
                                 .overlay(Circle().stroke(Color.glassAccent.opacity(0.3), lineWidth: 1))
                         )
                 }
-                .accessibilityLabel(viewModel.isPlaying ? "Stop playback" : "Play audio")
+                .accessibilityLabel(viewModel.isPlaying ? "Pause playback" : "Play audio")
             }
 
             // Progress bar
@@ -269,9 +273,9 @@ struct ReadView: View {
                 if viewModel.audioURL != nil {
                     Button(action: { viewModel.togglePlay() }) {
                         HStack(spacing: 6) {
-                            Image(systemName: viewModel.isPlaying ? "stop.fill" : "play.fill")
+                            Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                                 .font(.system(size: 13, weight: .semibold))
-                            Text(viewModel.isPlaying ? "Stop" : "Play")
+                            Text(viewModel.isPlaying ? "Pause" : (viewModel.isPaused ? "Resume" : "Play"))
                         }
                     }
                     .buttonStyle(GlassSecondaryButtonStyle())

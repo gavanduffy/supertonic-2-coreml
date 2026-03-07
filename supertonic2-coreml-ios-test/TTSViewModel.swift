@@ -70,6 +70,7 @@ final class TTSViewModel: ObservableObject {
 
     @Published var isGenerating: Bool = false
     @Published var isPlaying: Bool = false
+    @Published var isPaused: Bool = false
     @Published var isLoadingModels: Bool = false
     @Published var errorMessage: String?
     @Published var metrics: Metrics?
@@ -225,7 +226,9 @@ final class TTSViewModel: ObservableObject {
 
     func togglePlay() {
         if isPlaying {
-            stopPlayback()
+            pausePlayback()
+        } else if isPaused {
+            resumeOrPlay()
         } else if let url = audioURL {
             play(url: url)
         }
@@ -234,17 +237,25 @@ final class TTSViewModel: ObservableObject {
     func stopPlayback() {
         player.stop()
         isPlaying = false
+        isPaused = false
         playbackProgress = 0
         NowPlayingManager.shared.clear()
     }
 
     func pausePlayback() {
-        // AVAudioPlayer doesn't natively support pause in our wrapper, so stop.
-        stopPlayback()
+        player.pause()
+        isPlaying = false
+        isPaused = true
+        NowPlayingManager.shared.updateElapsed(player.currentTime, rate: 0)
     }
 
     func resumeOrPlay() {
-        if let url = audioURL {
+        if isPaused {
+            player.resume()
+            isPlaying = true
+            isPaused = false
+            NowPlayingManager.shared.updateElapsed(player.currentTime, rate: 1)
+        } else if let url = audioURL {
             play(url: url)
         }
     }
@@ -261,11 +272,13 @@ final class TTSViewModel: ObservableObject {
         player.play(url: url) { [weak self] in
             DispatchQueue.main.async {
                 self?.isPlaying = false
+                self?.isPaused = false
                 self?.playbackProgress = 0
                 NowPlayingManager.shared.clear()
             }
         }
         isPlaying = true
+        isPaused = false
         playbackProgress = 0
         // Update lock-screen metadata.
         NowPlayingManager.shared.update(

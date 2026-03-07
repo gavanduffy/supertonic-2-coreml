@@ -22,6 +22,9 @@ final class AudioPlayer: NSObject, AVAudioPlayerDelegate {
     /// Current playback position.
     var currentTime: TimeInterval { player?.currentTime ?? 0 }
 
+    /// Whether the player is actively playing (not paused).
+    var isPlaying: Bool { player?.isPlaying ?? false }
+
     func play(url: URL, onFinish: (() -> Void)? = nil) {
         self.onFinish = onFinish
         stopProgressTimer()
@@ -43,6 +46,18 @@ final class AudioPlayer: NSObject, AVAudioPlayerDelegate {
             print("Audio play error: \(error)")
             onFinish?()
         }
+    }
+
+    /// Pause playback, preserving the current position.
+    func pause() {
+        player?.pause()
+        stopProgressTimer()
+    }
+
+    /// Resume from the paused position.
+    func resume() {
+        player?.play()
+        startProgressTimer()
     }
 
     func stop() {
