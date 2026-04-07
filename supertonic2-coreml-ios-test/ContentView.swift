@@ -7,7 +7,21 @@
 
 import SwiftUI
 
-// MARK: - Root
+// MARK: - Availability helpers
+
+/// Applies `.symbolEffect(.variableColor.iterative, isActive:)` on iOS 17+
+/// and is a no-op on earlier OS versions.
+private struct VariableColorSymbolEffect: ViewModifier {
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 17, *) {
+            content.symbolEffect(.variableColor.iterative, isActive: isActive)
+        } else {
+            content
+        }
+    }
+}
 
 struct ContentView: View {
     @StateObject private var viewModel = TTSViewModel()
@@ -80,7 +94,7 @@ struct MiniPlayerBar: View {
                     Image(systemName: viewModel.isPlaying ? "waveform" : "speaker.fill")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.white)
-                        .symbolEffect(.variableColor.iterative, isActive: viewModel.isPlaying)
+                        .modifier(VariableColorSymbolEffect(isActive: viewModel.isPlaying))
                 }
 
                 VStack(alignment: .leading, spacing: 2) {

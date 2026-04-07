@@ -5,7 +5,9 @@
 //  Persists recent TTS items so the user can replay past readings.
 //
 
+import Combine
 import Foundation
+import SwiftUI
 
 /// A single entry in the reading history.
 struct HistoryItem: Identifiable, Codable {
@@ -54,7 +56,7 @@ final class HistoryManager: ObservableObject {
 
     private static let maxItems = 50
 
-    static var audioDirectory: URL {
+    nonisolated static var audioDirectory: URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let dir = docs.appendingPathComponent("tts_audio", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

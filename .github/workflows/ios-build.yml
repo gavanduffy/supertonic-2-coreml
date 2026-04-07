@@ -74,3 +74,33 @@ jobs:
           name: xcodebuild-log
           path: /tmp/xcodebuild*.log
           retention-days: 7
+
+      # Archive the app targeting a generic iOS device with signing disabled,
+      # then manually package the .app into an unsigned IPA.
+      - name: Build unsigned IPA
+        run: |
+          xcodebuild archive \
+            -project supertonic2-coreml-ios-test.xcodeproj \
+            -scheme "supertonic2-coreml-ios-test" \
+            -destination "generic/platform=iOS" \
+            -archivePath /tmp/supertonic2.xcarchive \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee /tmp/xcodebuild-archive.log \
+            | xcpretty --color --simple \
+            || (cat /tmp/xcodebuild-archive.log && exit 1)
+
+          APP_PATH=$(find /tmp/supertonic2.xcarchive/Products -name "*.app" | head -1)
+          mkdir -p /tmp/ipa-payload/Payload
+          cp -r "$APP_PATH" /tmp/ipa-payload/Payload/
+          cd /tmp/ipa-payload
+          zip -r /tmp/supertonic2-unsigned.ipa Payload
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: supertonic2-unsigned-ipa
+          path: /tmp/supertonic2-unsigned.ipa
+          retention-days: 14
