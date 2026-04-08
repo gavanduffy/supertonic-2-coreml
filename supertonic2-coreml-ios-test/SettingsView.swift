@@ -70,7 +70,7 @@ struct SettingsView: View {
             settingsRow(label: "Voice", icon: "person.wave.2") {
                 Picker("Voice", selection: $viewModel.selectedVoice) {
                     ForEach(viewModel.availableVoices, id: \.self) { v in
-                        Text(v).tag(v)
+                        Text(voiceDisplayName(v)).tag(v)
                     }
                 }
                 .disabled(viewModel.availableVoices.isEmpty || viewModel.isGenerating)
@@ -263,5 +263,15 @@ struct SettingsView: View {
     private func glassSlider(value: Binding<Double>, range: ClosedRange<Double>, step: Double) -> some View {
         Slider(value: value, in: range, step: step)
             .tint(.accentColor)
+    }
+
+    private func voiceDisplayName(_ id: String) -> String {
+        switch id {
+        case "F1": return "Sarah (Female)"
+        case "F2": return "Emma (Female)"
+        case "M1": return "James (Male)"
+        case "M2": return "David (Male)"
+        default: return id
+        }
     }
 }

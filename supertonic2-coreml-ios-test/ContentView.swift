@@ -185,6 +185,7 @@ struct ReadView: View {
             .padding(.top, 16)
             .padding(.bottom, 100)
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("")
         .navigationBarHidden(true)
     }

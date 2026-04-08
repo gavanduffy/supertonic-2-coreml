@@ -212,7 +212,7 @@ struct URLInputView: View {
             do {
                 let text = try await URLTextFetcher.fetchText(from: url)
                 await MainActor.run {
-                    viewModel.text = text
+                    viewModel.text = sanitizeForTTS(text)
                     isFetching = false
                 }
             } catch {
@@ -222,5 +222,16 @@ struct URLInputView: View {
                 }
             }
         }
+    }
+
+    private func sanitizeForTTS(_ raw: String) -> String {
+        // Remove emoji and non-ASCII symbols, normalize whitespace
+        let noEmoji = raw.unicodeScalars.filter { scalar in
+            !scalar.properties.isEmojiPresentation &&
+            scalar.value < 0x10000
+        }.reduce("") { $0 + String($1) }
+        // Collapse multiple spaces/newlines
+        let components = noEmoji.components(separatedBy: .whitespacesAndNewlines)
+        return components.filter { !$0.isEmpty }.joined(separator: " ")
     }
 }

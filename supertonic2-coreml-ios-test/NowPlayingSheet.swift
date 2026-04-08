@@ -149,7 +149,7 @@ struct NowPlayingSheet: View {
 
                         // ── Info footer ──────────────────────────────────────
                         VStack(spacing: 10) {
-                            infoRow(icon: "person.wave.2.fill", label: "Voice", value: viewModel.selectedVoice)
+                            infoRow(icon: "person.wave.2.fill", label: "Voice", value: voiceDisplayName(viewModel.selectedVoice))
                             infoRow(icon: "speedometer", label: "Speed", value: String(format: "%.1f×", viewModel.speed))
                             if viewModel.playbackRemaining > 0 {
                                 infoRow(icon: "clock", label: "Remaining", value: formatTime(viewModel.playbackRemaining))
@@ -306,6 +306,16 @@ struct NowPlayingSheet: View {
             } catch {
                 await MainActor.run { isExportingNP = false }
             }
+        }
+    }
+
+    private func voiceDisplayName(_ id: String) -> String {
+        switch id {
+        case "F1": return "Sarah (Female)"
+        case "F2": return "Emma (Female)"
+        case "M1": return "James (Male)"
+        case "M2": return "David (Male)"
+        default: return id
         }
     }
 }
