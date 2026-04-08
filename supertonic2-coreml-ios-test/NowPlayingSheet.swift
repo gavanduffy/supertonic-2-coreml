@@ -19,8 +19,8 @@ struct NowPlayingSheet: View {
 
     var body: some View {
         ZStack {
-            LiquidGlassBackground()
-                .ignoresSafeArea()
+            // Use native system background (no custom LiquidGlassBackground)
+            Color(.systemBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // ── Drag handle ──────────────────────────────────────────────
@@ -35,13 +35,9 @@ struct NowPlayingSheet: View {
                         // ── Artwork circle ───────────────────────────────────
                         ZStack {
                             Circle()
-                                .fill(LinearGradient(
-                                    colors: [.glassAccent, .glassAccent2],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ))
+                                .fill(.tint)
                                 .frame(width: 140, height: 140)
-                                .shadow(color: .glassAccent.opacity(0.35), radius: 24, x: 0, y: 8)
+                                .shadow(color: Color.accentColor.opacity(0.35), radius: 24, x: 0, y: 8)
 
                             if viewModel.isPlaying && !viewModel.meterLevels.isEmpty {
                                 WaveformBarsView(levels: viewModel.meterLevels, isActive: true)
@@ -59,7 +55,7 @@ struct NowPlayingSheet: View {
                         VStack(spacing: 6) {
                             Text(viewModel.nowPlayingTitle.isEmpty ? "Supertonic TTS" : viewModel.nowPlayingTitle)
                                 .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.glassText)
+                                .foregroundColor(.primary)
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
                                 .padding(.horizontal, 24)
@@ -67,13 +63,12 @@ struct NowPlayingSheet: View {
                             if viewModel.isPaused {
                                 Text("Paused")
                                     .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.glassAccent.opacity(0.85))
+                                    .foregroundColor(.tint)
                             }
                         }
 
                         // ── Scrubber ─────────────────────────────────────────
-                        GlassCard(padding: 16) {
-                            VStack(spacing: 8) {
+                        VStack(spacing: 8) {
                                 // Progress slider
                                 GeometryReader { geo in
                                     ZStack(alignment: .leading) {
@@ -81,18 +76,14 @@ struct NowPlayingSheet: View {
                                             .fill(Color.black.opacity(0.08))
                                             .frame(height: 5)
                                         Capsule()
-                                            .fill(LinearGradient(
-                                                colors: [.glassAccent, .glassAccent2],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            ))
+                                            .fill(.tint)
                                             .frame(
                                                 width: geo.size.width * max(0, min(1, viewModel.playbackProgress)),
                                                 height: 5
                                             )
                                         // Scrub thumb
                                         Circle()
-                                            .fill(Color.glassAccent)
+                                            .fill(.tint)
                                             .frame(width: 14, height: 14)
                                             .offset(x: geo.size.width * max(0, min(1, viewModel.playbackProgress)) - 7)
                                     }
@@ -112,14 +103,15 @@ struct NowPlayingSheet: View {
                                 HStack {
                                     Text(formatTime(viewModel.currentTime))
                                         .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                        .foregroundColor(.glassTextMuted)
+                                        .foregroundStyle(.secondary)
                                     Spacer()
                                     Text(formatTime(viewModel.totalDuration))
                                         .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                        .foregroundColor(.glassTextMuted)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
-                        }
+                        .padding(16)
+                        .glassEffect()
                         .padding(.horizontal, 20)
 
                         // ── Playback controls ────────────────────────────────
@@ -128,9 +120,9 @@ struct NowPlayingSheet: View {
                             Button(action: { viewModel.skipBackward() }) {
                                 Image(systemName: "gobackward.15")
                                     .font(.system(size: 26, weight: .semibold))
-                                    .foregroundColor(viewModel.isPlaying || viewModel.isPaused ? .glassAccent : .glassTextMuted)
                                     .frame(width: 52, height: 52)
                             }
+                            .buttonStyle(.glass)
                             .disabled(!viewModel.isPlaying && !viewModel.isPaused)
                             .accessibilityLabel("Skip back 15 seconds")
 
@@ -138,17 +130,9 @@ struct NowPlayingSheet: View {
                             Button(action: { viewModel.togglePlay() }) {
                                 Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                                     .font(.system(size: 30, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundStyle(.white)
                                     .frame(width: 68, height: 68)
-                                    .background(
-                                        Circle()
-                                            .fill(LinearGradient(
-                                                colors: [.glassAccent, .glassAccent2],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ))
-                                            .shadow(color: .glassAccent.opacity(0.40), radius: 12, x: 0, y: 4)
-                                    )
+                                    .background(.tint, in: Circle())
                             }
                             .accessibilityLabel(viewModel.isPlaying ? "Pause" : "Play")
 
@@ -156,23 +140,23 @@ struct NowPlayingSheet: View {
                             Button(action: { viewModel.skipForward() }) {
                                 Image(systemName: "goforward.15")
                                     .font(.system(size: 26, weight: .semibold))
-                                    .foregroundColor(viewModel.isPlaying || viewModel.isPaused ? .glassAccent : .glassTextMuted)
                                     .frame(width: 52, height: 52)
                             }
+                            .buttonStyle(.glass)
                             .disabled(!viewModel.isPlaying && !viewModel.isPaused)
                             .accessibilityLabel("Skip forward 15 seconds")
                         }
 
                         // ── Info footer ──────────────────────────────────────
-                        GlassCard(padding: 16) {
-                            VStack(spacing: 10) {
-                                infoRow(icon: "person.wave.2.fill", label: "Voice", value: viewModel.selectedVoice)
-                                infoRow(icon: "speedometer", label: "Speed", value: String(format: "%.1f×", viewModel.speed))
-                                if viewModel.playbackRemaining > 0 {
-                                    infoRow(icon: "clock", label: "Remaining", value: formatTime(viewModel.playbackRemaining))
-                                }
+                        VStack(spacing: 10) {
+                            infoRow(icon: "person.wave.2.fill", label: "Voice", value: viewModel.selectedVoice)
+                            infoRow(icon: "speedometer", label: "Speed", value: String(format: "%.1f×", viewModel.speed))
+                            if viewModel.playbackRemaining > 0 {
+                                infoRow(icon: "clock", label: "Remaining", value: formatTime(viewModel.playbackRemaining))
                             }
                         }
+                        .padding(16)
+                        .glassEffect()
                         .padding(.horizontal, 20)
 
                         // ── Export button ─────────────────────────────────────
@@ -180,7 +164,6 @@ struct NowPlayingSheet: View {
                             HStack(spacing: 8) {
                                 if isExportingNP {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .glassAccent))
                                         .scaleEffect(0.85)
                                 } else {
                                     Image(systemName: "square.and.arrow.up")
@@ -189,18 +172,10 @@ struct NowPlayingSheet: View {
                                 Text(isExportingNP ? "Exporting…" : "Export Audio")
                                     .font(.system(size: 15, weight: .semibold))
                             }
-                            .foregroundColor(.glassAccent)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Color.glassAccent.opacity(0.12))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .stroke(Color.glassAccent.opacity(0.25), lineWidth: 1)
-                                    )
-                            )
                         }
+                        .buttonStyle(.glass)
                         .disabled(viewModel.audioURL == nil || isExportingNP)
                         .padding(.horizontal, 20)
                         .sheet(isPresented: $showingExportNP) {
@@ -218,7 +193,8 @@ struct NowPlayingSheet: View {
                             Label("Stop & Close", systemImage: "stop.fill")
                                 .font(.system(size: 15, weight: .semibold))
                         }
-                        .buttonStyle(GlassDestructiveButtonStyle())
+                        .buttonStyle(.glass)
+                        .tint(.red)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 40)
                     }
@@ -234,15 +210,15 @@ struct NowPlayingSheet: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 14))
-                .foregroundColor(.glassAccent)
+                .foregroundColor(.tint)
                 .frame(width: 22)
             Text(label)
                 .font(.system(size: 14))
-                .foregroundColor(.glassTextMuted)
+                .foregroundColor(.secondary)
             Spacer()
             Text(value)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.glassText)
+                .foregroundColor(.primary)
         }
     }
 
@@ -258,31 +234,31 @@ struct NowPlayingSheet: View {
 
     @ViewBuilder
     private var npExportSheet: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
-                GlassCard(padding: 20) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Export Format")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.glassTextMuted)
-                            .textCase(.uppercase)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Export Format")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
 
-                        ForEach(AudioExportFormat.allCases) { format in
-                            Button(action: { npExportFormat = format }) {
-                                HStack {
-                                    Text(format.displayName)
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.glassText)
-                                    Spacer()
-                                    if npExportFormat == format {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.glassAccent)
-                                    }
+                    ForEach(AudioExportFormat.allCases) { format in
+                        Button(action: { npExportFormat = format }) {
+                            HStack {
+                                Text(format.displayName)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                if npExportFormat == format {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.tint)
                                 }
                             }
                         }
                     }
                 }
+                .padding(20)
+                .glassEffect()
                 .padding(.horizontal, 20)
 
                 Button(action: { startNPExport() }) {
@@ -292,20 +268,19 @@ struct NowPlayingSheet: View {
                         .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.glassAccent)
+                .tint(.tint)
                 .padding(.horizontal, 20)
                 .disabled(isExportingNP)
 
                 Spacer()
             }
             .padding(.top, 24)
-            .background(LiquidGlassBackground().ignoresSafeArea())
             .navigationTitle("Export Audio")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { showingExportNP = false }
-                        .foregroundColor(.glassAccent)
+                        .tint(.tint)
                 }
             }
         }

@@ -29,35 +29,24 @@ struct ContentView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            LiquidGlassBackground()
-
             TabView {
                 // ── Read tab ────────────────────────────────────────────────
                 ReadView(viewModel: viewModel)
-                    .tabItem {
-                        Label("Read", systemImage: "text.bubble.fill")
-                    }
+                    .tabItem { Label("Read", systemImage: "text.bubble.fill") }
 
                 // ── URL tab ─────────────────────────────────────────────────
                 URLInputView(viewModel: viewModel)
-                    .tabItem {
-                        Label("URL", systemImage: "link.circle.fill")
-                    }
+                    .tabItem { Label("URL", systemImage: "link.circle.fill") }
 
                 // ── History tab ─────────────────────────────────────────────
                 HistoryView(viewModel: viewModel)
-                    .tabItem {
-                        Label("History", systemImage: "clock.arrow.circlepath")
-                    }
+                    .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
 
                 // ── Settings tab ─────────────────────────────────────────────
                 SettingsView(viewModel: viewModel)
-                    .tabItem {
-                        Label("Settings", systemImage: "gearshape.fill")
-                    }
+                    .tabItem { Label("Settings", systemImage: "gearshape.fill") }
             }
             .toolbarBackground(.ultraThinMaterial, for: .tabBar)
-            .toolbarColorScheme(.light, for: .tabBar)
 
             // Mini NowPlaying bar — floats above the tab bar when playing.
             if viewModel.isPlaying || viewModel.isPaused || viewModel.audioURL != nil {
@@ -87,40 +76,34 @@ struct MiniPlayerBar: View {
     @ObservedObject var viewModel: TTSViewModel
 
     var body: some View {
-        GlassCard(padding: 12) {
+        VStack(spacing: 6) {
             HStack(spacing: 12) {
                 // Waveform icon or spinner
                 ZStack {
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [.glassAccent, .glassAccent2],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 36, height: 36)
+                    Circle().fill(.tint).frame(width: 36, height: 36)
                     Image(systemName: viewModel.isPlaying ? "waveform" : "speaker.fill")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .modifier(VariableColorSymbolEffect(isActive: viewModel.isPlaying))
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(viewModel.nowPlayingTitle.isEmpty ? "Supertonic TTS" : viewModel.nowPlayingTitle)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.glassText)
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
                     if viewModel.isPlaying && viewModel.playbackRemaining > 0 {
                         Text(timeString(viewModel.playbackRemaining) + " remaining")
                             .font(.system(size: 11))
-                            .foregroundColor(.glassTextMuted)
+                            .foregroundStyle(.secondary)
                     } else if viewModel.isPaused {
                         Text("Paused")
                             .font(.system(size: 11))
-                            .foregroundColor(.glassAccent.opacity(0.85))
+                            .foregroundStyle(.tint)
                     } else {
                         Text("Ready to play")
                             .font(.system(size: 11))
-                            .foregroundColor(.glassTextMuted)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -130,7 +113,7 @@ struct MiniPlayerBar: View {
                 Button(action: { viewModel.skipBackward() }) {
                     Image(systemName: "gobackward.15")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.glassAccent)
+                        .foregroundStyle(.tint)
                         .frame(width: 34, height: 34)
                 }
                 .accessibilityLabel("Skip back 15 seconds")
@@ -140,13 +123,9 @@ struct MiniPlayerBar: View {
                 Button(action: { viewModel.togglePlay() }) {
                     Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.glassAccent)
                         .frame(width: 40, height: 40)
-                        .background(
-                            Circle()
-                                .fill(Color.glassAccent.opacity(0.12))
-                                .overlay(Circle().stroke(Color.glassAccent.opacity(0.25), lineWidth: 1))
-                        )
+                        .background(.tint, in: Circle())
+                        .foregroundStyle(.white)
                 }
                 .accessibilityLabel(viewModel.isPlaying ? "Pause playback" : "Play audio")
 
@@ -154,33 +133,28 @@ struct MiniPlayerBar: View {
                 Button(action: { viewModel.skipForward() }) {
                     Image(systemName: "goforward.15")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.glassAccent)
+                        .foregroundStyle(.tint)
                         .frame(width: 34, height: 34)
                 }
                 .accessibilityLabel("Skip forward 15 seconds")
                 .disabled(!viewModel.isPlaying && !viewModel.isPaused)
             }
+            .padding(.horizontal, 12)
 
             // Progress bar
             if viewModel.isPlaying && viewModel.playbackProgress > 0 {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.black.opacity(0.08))
-                            .frame(height: 2)
-                        Capsule()
-                            .fill(LinearGradient(
-                                colors: [.glassAccent, .glassAccent2],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ))
-                            .frame(width: geo.size.width * viewModel.playbackProgress, height: 2)
+                        Capsule().fill(.quaternary).frame(height: 2)
+                        Capsule().fill(.tint).frame(width: geo.size.width * viewModel.playbackProgress, height: 2)
                     }
                 }
                 .frame(height: 2)
                 .padding(.top, 6)
             }
         }
+        .padding(12)
+        .glassEffect()
     }
 
     private func timeString(_ seconds: Double) -> String {
@@ -199,21 +173,17 @@ struct ReadView: View {
     @ObservedObject var viewModel: TTSViewModel
 
     var body: some View {
-        ZStack {
-            LiquidGlassBackground()
-
-            ScrollView {
-                VStack(spacing: 16) {
-                    headerCard
-                    inputCard
-                    actionCard
-                    metricsCard
-                    samplesCard
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 100)
+        ScrollView {
+            VStack(spacing: 16) {
+                headerCard
+                inputCard
+                actionCard
+                metricsCard
+                samplesCard
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 100)
         }
         .navigationTitle("")
         .navigationBarHidden(true)
@@ -222,84 +192,87 @@ struct ReadView: View {
     // MARK: Header
 
     private var headerCard: some View {
-        GlassCard {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [.glassAccent, .glassAccent2],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "waveform.and.mic")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                }
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(.tint).frame(width: 48, height: 48)
+                Image(systemName: "waveform.and.mic")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Supertonic TTS")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.glassText)
-                    Text("On-device · Int8 CoreML pipeline")
-                        .font(.system(size: 12))
-                        .foregroundColor(.glassTextMuted)
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Supertonic TTS")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.primary)
+                Text("On-device · Int8 CoreML pipeline")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
 
-                Spacer()
+            Spacer()
 
-                if viewModel.isLoadingModels {
-                    VStack(alignment: .trailing, spacing: 4) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .glassAccent))
-                            .scaleEffect(0.8)
-                        Text(viewModel.loadingMessage)
-                            .font(.system(size: 10))
-                            .foregroundColor(.glassTextMuted)
-                            .multilineTextAlignment(.trailing)
-                    }
-                } else if !viewModel.availableVoices.isEmpty {
-                    GlassStatusPill(text: "Ready", systemImage: "checkmark.circle.fill", color: .glassAccent)
+            if viewModel.isLoadingModels {
+                VStack(alignment: .trailing, spacing: 4) {
+                    ProgressView()
+                        .tint(.accentColor)
+                        .scaleEffect(0.8)
+                    Text(viewModel.loadingMessage)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
                 }
+            } else if !viewModel.availableVoices.isEmpty {
+                Label("Ready", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.tint)
             }
         }
+        .padding(12)
+        .glassEffect()
     }
 
     // MARK: Input
 
     private var inputCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    GlassSectionHeader(title: "Text", systemImage: "doc.text")
-                    Spacer()
-                    Button(action: pasteText) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "doc.on.clipboard")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text("Paste")
-                                .font(.system(size: 12, weight: .semibold))
-                        }
-                        .foregroundColor(.glassAccent)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Text", systemImage: "doc.text")
+                    .font(.caption)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(action: pasteText) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.on.clipboard")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Paste")
+                            .font(.system(size: 12, weight: .semibold))
                     }
-                    .accessibilityLabel("Paste text from clipboard")
                 }
-
-                GlassTextEditor(text: $viewModel.text, minHeight: 140)
+                .tint(.accentColor)
+                .accessibilityLabel("Paste text from clipboard")
             }
+
+            // Replaced custom editor with native TextEditor + glassEffect
+            TextEditor(text: $viewModel.text)
+                .frame(minHeight: 140)
+                .scrollContentBackground(.hidden)
+                .padding(10)
+                .glassEffect()
         }
+        .padding(12)
+        .glassEffect()
     }
 
     // MARK: Actions
 
     private var actionCard: some View {
-        GlassCard(padding: 14) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
                 Button(action: { viewModel.generate() }) {
                     HStack(spacing: 6) {
                         if viewModel.isGenerating {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .tint(.white)
                                 .scaleEffect(0.75)
                         } else {
                             Image(systemName: "sparkles")
@@ -308,7 +281,7 @@ struct ReadView: View {
                         Text(viewModel.isGenerating ? "Generating…" : "Generate")
                     }
                 }
-                .buttonStyle(GlassPrimaryButtonStyle())
+                .buttonStyle(.glassProminent)
                 .disabled(viewModel.isGenerating || viewModel.isLoadingModels || viewModel.availableVoices.isEmpty)
 
                 if viewModel.audioURL != nil {
@@ -319,7 +292,7 @@ struct ReadView: View {
                             Text(viewModel.isPlaying ? "Pause" : (viewModel.isPaused ? "Resume" : "Play"))
                         }
                     }
-                    .buttonStyle(GlassSecondaryButtonStyle())
+                    .buttonStyle(.glass)
                     .disabled(viewModel.isGenerating)
                 }
             }
@@ -327,11 +300,13 @@ struct ReadView: View {
 
             if let error = viewModel.errorMessage {
                 Text(error)
-                    .foregroundColor(.glassDanger)
+                    .foregroundStyle(Color.red)
                     .font(.system(size: 13))
                     .padding(.top, 6)
             }
         }
+        .padding(14)
+        .glassEffect()
     }
 
     // MARK: Metrics
@@ -339,40 +314,43 @@ struct ReadView: View {
     @ViewBuilder
     private var metricsCard: some View {
         if let m = viewModel.metrics {
-            GlassCard {
-                VStack(alignment: .leading, spacing: 10) {
-                    GlassSectionHeader(title: "Performance", systemImage: "gauge.with.dots.needle.33percent")
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Performance", systemImage: "gauge.with.dots.needle.33percent")
+                    .font(.caption)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.secondary)
 
-                    GlassDivider()
+                Divider()
 
-                    HStack(spacing: 0) {
-                        metricItem(label: "Audio", value: String(format: "%.2fs", m.audioSeconds))
-                        metricItem(label: "Elapsed", value: String(format: "%.2fs", m.elapsedSeconds))
-                        metricItem(label: "RTF", value: String(format: "%.2f×", m.rtf))
-                    }
+                HStack(spacing: 0) {
+                    metricItem(label: "Audio", value: String(format: "%.2fs", m.audioSeconds))
+                    metricItem(label: "Elapsed", value: String(format: "%.2fs", m.elapsedSeconds))
+                    metricItem(label: "RTF", value: String(format: "%.2f×", m.rtf))
+                }
 
-                    GlassDivider()
+                Divider()
 
-                    HStack(spacing: 0) {
-                        metricItem(label: "DP", value: String(format: "%.2fs", m.timing.durationPredictor))
-                        metricItem(label: "TE", value: String(format: "%.2fs", m.timing.textEncoder))
-                        metricItem(label: "VE", value: String(format: "%.2fs", m.timing.vectorEstimator))
-                        metricItem(label: "Voc", value: String(format: "%.2fs", m.timing.vocoder))
-                    }
+                HStack(spacing: 0) {
+                    metricItem(label: "DP", value: String(format: "%.2fs", m.timing.durationPredictor))
+                    metricItem(label: "TE", value: String(format: "%.2fs", m.timing.textEncoder))
+                    metricItem(label: "VE", value: String(format: "%.2fs", m.timing.vectorEstimator))
+                    metricItem(label: "Voc", value: String(format: "%.2fs", m.timing.vocoder))
+                }
 
-                    if let before = m.memoryBeforeMB, let after = m.memoryAfterMB {
-                        GlassDivider()
-                        HStack(spacing: 4) {
-                            Image(systemName: "memorychip")
-                                .font(.system(size: 11))
-                                .foregroundColor(.glassTextMuted)
-                            Text(String(format: "%.1f MB → %.1f MB", before, after))
-                                .font(.system(size: 12))
-                                .foregroundColor(.glassTextMuted)
-                        }
+                if let before = m.memoryBeforeMB, let after = m.memoryAfterMB {
+                    Divider()
+                    HStack(spacing: 4) {
+                        Image(systemName: "memorychip")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Text(String(format: "%.1f MB → %.1f MB", before, after))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
+            .padding(12)
+            .glassEffect()
         }
     }
 
@@ -380,10 +358,10 @@ struct ReadView: View {
         VStack(spacing: 3) {
             Text(value)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.glassText)
+                .foregroundStyle(.primary)
             Text(label)
                 .font(.system(size: 11))
-                .foregroundColor(.glassTextMuted)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -391,41 +369,44 @@ struct ReadView: View {
     // MARK: Samples
 
     private var samplesCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "Sample Prompts", systemImage: "text.quote")
-                GlassDivider()
-                ForEach(viewModel.samples) { sample in
-                    Button(action: {
-                        viewModel.text = sample.text
-                        viewModel.language = sample.language
-                    }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "quote.opening")
-                                .font(.system(size: 14))
-                                .foregroundColor(.glassAccent2)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(sample.title)
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.glassText)
-                                Text(sample.text)
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.glassTextMuted)
-                                    .lineLimit(2)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.glassTextMuted)
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Sample Prompts", systemImage: "text.quote")
+                .font(.caption)
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+            Divider()
+            ForEach(viewModel.samples) { sample in
+                Button(action: {
+                    viewModel.text = sample.text
+                    viewModel.language = sample.language
+                }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "quote.opening")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.tint)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(sample.title)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Text(sample.text)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
                         }
-                        .padding(.vertical, 6)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
                     }
-                    if sample.id != viewModel.samples.last?.id {
-                        GlassDivider()
-                    }
+                    .padding(.vertical, 6)
+                }
+                if sample.id != viewModel.samples.last?.id {
+                    Divider()
                 }
             }
         }
+        .padding(12)
+        .glassEffect()
     }
 
     // MARK: Helpers

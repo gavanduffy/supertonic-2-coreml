@@ -16,21 +16,17 @@ struct URLInputView: View {
     @State private var fetchError: String?
 
     var body: some View {
-        ZStack {
-            LiquidGlassBackground()
-
-            ScrollView {
-                VStack(spacing: 16) {
-                    pageHeader
-                    urlCard
-                    if isFetching { fetchingCard }
-                    if let err = fetchError { errorCard(err) }
-                    if !viewModel.text.isEmpty { previewCard }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 100)
+        ScrollView {
+            VStack(spacing: 16) {
+                pageHeader
+                urlCard
+                if isFetching { fetchingCard }
+                if let err = fetchError { errorCard(err) }
+                if !viewModel.text.isEmpty { previewCard }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 100)
         }
         .navigationTitle("")
         .navigationBarHidden(true)
@@ -39,149 +35,153 @@ struct URLInputView: View {
     // MARK: - Header
 
     private var pageHeader: some View {
-        GlassCard {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [.glassAccent, .glassAccent2],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "link.circle.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Read from URL")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.glassText)
-                    Text("Paste a link and we'll extract the article")
-                        .font(.system(size: 12))
-                        .foregroundColor(.glassTextMuted)
-                }
-                Spacer()
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(.tint)
+                    .frame(width: 48, height: 48)
+                Image(systemName: "link.circle.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
             }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Read from URL")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.primary)
+                Text("Paste a link and we'll extract the article")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
         }
+        .padding(14)
+        .glassEffect()
     }
 
     // MARK: - URL input card
 
     private var urlCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "Article URL", systemImage: "globe")
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Article URL", systemImage: "globe")
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
 
-                GlassDivider()
+            Divider()
 
-                GlassTextField(
-                    placeholder: "https://example.com/article",
-                    text: $urlString,
-                    keyboardType: .URL
-                )
+            TextField("https://example.com/article", text: $urlString)
+                .keyboardType(.URL)
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
+                .padding(12)
+                .glassEffect()
 
-                HStack(spacing: 10) {
-                    Button(action: pasteFromClipboard) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "doc.on.clipboard")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Paste URL")
-                        }
+            HStack(spacing: 10) {
+                Button(action: pasteFromClipboard) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.on.clipboard")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Paste URL")
                     }
-                    .buttonStyle(GlassSecondaryButtonStyle())
-
-                    Button(action: fetchURL) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.down.circle.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Fetch")
-                        }
-                    }
-                    .buttonStyle(GlassPrimaryButtonStyle())
-                    .disabled(urlString.trimmingCharacters(in: .whitespaces).isEmpty || isFetching)
                 }
+                .buttonStyle(.glass)
+
+                Button(action: fetchURL) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Fetch")
+                    }
+                }
+                .buttonStyle(.glassProminent)
+                .disabled(urlString.trimmingCharacters(in: .whitespaces).isEmpty || isFetching)
             }
         }
+        .padding(14)
+        .glassEffect()
     }
 
     // MARK: - Fetching indicator
 
     private var fetchingCard: some View {
-        GlassCard(padding: 14) {
-            HStack(spacing: 12) {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .glassAccent))
-                Text("Extracting article text…")
-                    .font(.system(size: 14))
-                    .foregroundColor(.glassTextMuted)
-                Spacer()
-            }
+        HStack(spacing: 12) {
+            ProgressView()
+                .tint(.accentColor)
+            Text("Extracting article text…")
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+            Spacer()
         }
+        .padding(14)
+        .glassEffect()
     }
 
     // MARK: - Error card
 
     private func errorCard(_ message: String) -> some View {
-        GlassCard(padding: 14) {
-            HStack(spacing: 10) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.glassDanger)
-                Text(message)
-                    .font(.system(size: 13))
-                    .foregroundColor(.glassDanger.opacity(0.9))
-                Spacer()
-            }
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.red)
+            Text(message)
+                .font(.system(size: 13))
+                .foregroundStyle(.red)
+                .opacity(0.9)
+            Spacer()
         }
+        .padding(14)
+        .glassEffect()
     }
 
     // MARK: - Preview card
 
     private var previewCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "Extracted Text", systemImage: "doc.plaintext")
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Extracted Text", systemImage: "doc.plaintext")
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
 
-                GlassDivider()
+            Divider()
 
-                Text(viewModel.text)
-                    .font(.system(size: 13))
-                    .foregroundColor(.glassText)
-                    .lineLimit(12)
-                    .fixedSize(horizontal: false, vertical: true)
+            Text(viewModel.text)
+                .font(.system(size: 13))
+                .foregroundStyle(.primary)
+                .lineLimit(12)
+                .fixedSize(horizontal: false, vertical: true)
 
-                GlassDivider()
+            Divider()
 
-                HStack(spacing: 12) {
-                    Button(action: { viewModel.generate() }) {
+            HStack(spacing: 12) {
+                Button(action: { viewModel.generate() }) {
+                    HStack(spacing: 6) {
+                        if viewModel.isGenerating {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.75)
+                        } else {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        Text(viewModel.isGenerating ? "Generating…" : "Read aloud")
+                    }
+                }
+                .buttonStyle(.glassProminent)
+                .disabled(viewModel.isGenerating || viewModel.isLoadingModels || viewModel.availableVoices.isEmpty)
+
+                if viewModel.audioURL != nil {
+                    Button(action: { viewModel.togglePlay() }) {
                         HStack(spacing: 6) {
-                            if viewModel.isGenerating {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.75)
-                            } else {
-                                Image(systemName: "play.fill")
-                                    .font(.system(size: 13, weight: .semibold))
-                            }
-                            Text(viewModel.isGenerating ? "Generating…" : "Read aloud")
+                            Image(systemName: viewModel.isPlaying ? "pause.fill" : "arrow.clockwise")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text(viewModel.isPlaying ? "Pause" : (viewModel.isPaused ? "Resume" : "Play again"))
                         }
                     }
-                    .buttonStyle(GlassPrimaryButtonStyle())
-                    .disabled(viewModel.isGenerating || viewModel.isLoadingModels || viewModel.availableVoices.isEmpty)
-
-                    if viewModel.audioURL != nil {
-                        Button(action: { viewModel.togglePlay() }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: viewModel.isPlaying ? "pause.fill" : "arrow.clockwise")
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text(viewModel.isPlaying ? "Pause" : (viewModel.isPaused ? "Resume" : "Play again"))
-                            }
-                        }
-                        .buttonStyle(GlassSecondaryButtonStyle())
-                    }
+                    .buttonStyle(.glass)
                 }
             }
         }
+        .padding(14)
+        .glassEffect()
     }
 
     // MARK: - Actions

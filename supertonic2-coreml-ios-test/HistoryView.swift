@@ -3,7 +3,7 @@
 //  supertonic2-coreml-ios-test
 //
 //  Displays past TTS readings and lets the user replay them.
-//  Redesigned with iOS 26 Liquid Glass aesthetics.
+//  Updated to use native iOS 26 Liquid Glass APIs.
 //
 
 import SwiftUI
@@ -12,10 +12,10 @@ struct HistoryView: View {
     @ObservedObject var viewModel: TTSViewModel
     @ObservedObject private var history = HistoryManager.shared
 
-    // B4: Search
+    // Search
     @State private var searchText = ""
 
-    // B4: Export
+    // Export
     @State private var exportItem: HistoryItem?
     @State private var exportFormat: AudioExportFormat = .m4a
     @State private var showingExportPicker = false
@@ -38,9 +38,7 @@ struct HistoryView: View {
     }
 
     var body: some View {
-        ZStack {
-            LiquidGlassBackground()
-
+        Group {
             if history.items.isEmpty {
                 emptyState
             } else {
@@ -49,11 +47,9 @@ struct HistoryView: View {
         }
         .navigationTitle("")
         .navigationBarHidden(true)
-        // Format picker sheet
         .sheet(isPresented: $showingExportPicker) {
             exportFormatSheet
         }
-        // Share sheet after export
         .sheet(item: $exportedFile) { file in
             ShareSheet(url: file.url)
         }
@@ -65,23 +61,23 @@ struct HistoryView: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color.glassAccent.opacity(0.12))
+                    .fill(.tint.opacity(0.12))
                     .frame(width: 100, height: 100)
                 Circle()
-                    .stroke(Color.glassAccent.opacity(0.25), lineWidth: 1.5)
+                    .stroke(.tint.opacity(0.25), lineWidth: 1.5)
                     .frame(width: 100, height: 100)
                 Image(systemName: "clock.arrow.circlepath")
                     .font(.system(size: 40, weight: .light))
-                    .foregroundColor(.glassAccent)
+                    .foregroundStyle(.tint)
             }
 
             VStack(spacing: 8) {
                 Text("No history yet")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.glassText)
+                    .foregroundStyle(.primary)
                 Text("Items you read aloud will appear here.\nYou can replay or load them for editing.")
                     .font(.system(size: 14))
-                    .foregroundColor(.glassTextMuted)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
             }
@@ -97,67 +93,38 @@ struct HistoryView: View {
             VStack(spacing: 0) {
                 // Header row
                 HStack {
-                    GlassCard(padding: 12) {
-                        HStack(spacing: 14) {
-                            ZStack {
-                                Circle()
-                                    .fill(LinearGradient(
-                                        colors: [.glassAccent, .glassAccent2],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ))
-                                    .frame(width: 44, height: 44)
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Reading History")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.glassText)
-                                Text("\(history.items.count) item\(history.items.count == 1 ? "" : "s")")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.glassTextMuted)
-                            }
-                            Spacer()
-                            Button(action: { history.clearAll() }) {
-                                Text("Clear all")
-                            }
-                            .buttonStyle(GlassDestructiveButtonStyle())
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(.tint.opacity(0.12))
+                                .frame(width: 44, height: 44)
+                            Circle()
+                                .stroke(.tint.opacity(0.25), lineWidth: 1)
+                                .frame(width: 44, height: 44)
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(.tint)
                         }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Reading History")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundStyle(.primary)
+                            Text("\(history.items.count) item\(history.items.count == 1 ? "" : "s")")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button(action: { history.clearAll() }) {
+                            Text("Clear all")
+                        }
+                        .buttonStyle(.glass)
+                        .tint(.red)
                     }
+                    .padding(12)
+                    .glassEffect()
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
-
-                // B4: Search field
-                HStack {
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 14))
-                            .foregroundColor(.glassTextMuted)
-                        TextField("Search history…", text: $searchText)
-                            .font(.system(size: 14))
-                            .foregroundColor(.glassText)
-                            .autocorrectionDisabled()
-                        if !searchText.isEmpty {
-                            Button(action: { searchText = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.glassTextMuted)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.black.opacity(0.06))
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.glassAccent.opacity(0.15), lineWidth: 1))
-                    )
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
 
                 VStack(spacing: 12) {
                     ForEach(filteredItems) { item in
@@ -169,9 +136,9 @@ struct HistoryView: View {
                 .padding(.bottom, 100)
 
                 if filteredItems.isEmpty && !searchText.isEmpty {
-                    Text("No results for "\(searchText)"")
+                    Text("No results for \"\(searchText)\"")
                         .font(.system(size: 14))
-                        .foregroundColor(.glassTextMuted)
+                        .foregroundStyle(.secondary)
                         .padding(.top, 24)
                 }
             }
@@ -183,124 +150,100 @@ struct HistoryView: View {
 
     @ViewBuilder
     private func historyRow(_ item: HistoryItem) -> some View {
-        GlassCard(padding: 14) {
-            VStack(alignment: .leading, spacing: 10) {
-                // Title + language badge
-                HStack(spacing: 8) {
-                    Text(item.title)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.glassText)
-                        .lineLimit(1)
-                    Spacer()
-                    GlassStatusPill(
-                        text: item.language.uppercased(),
-                        color: .glassAccent
-                    )
+        VStack(alignment: .leading, spacing: 10) {
+            // Title + language badge
+            HStack(spacing: 8) {
+                Text(item.title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer()
+                // Language badge
+                Text(item.language.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(.tint.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.tint)
+            }
+
+            // Preview text
+            Text(item.textPreview)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+
+            Divider()
+
+            // Footer: date + actions
+            HStack(spacing: 10) {
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    Text(dateFormatter.string(from: item.date))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
                 }
 
-                // Preview text
-                Text(item.textPreview)
-                    .font(.system(size: 12))
-                    .foregroundColor(.glassTextMuted)
-                    .lineLimit(2)
+                Spacer()
 
-                GlassDivider()
+                // Load for editing
+                Button(action: { loadItemForEditing(item) }) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .buttonStyle(.glass)
+                .accessibilityLabel("Load full text for editing")
 
-                // Footer: date + actions
-                HStack(spacing: 10) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 10))
-                            .foregroundColor(.glassTextMuted)
-                        Text(dateFormatter.string(from: item.date))
-                            .font(.system(size: 11))
-                            .foregroundColor(.glassTextMuted)
-                    }
-
-                    Spacer()
-
-                    // Load for editing
-                    Button(action: { loadItemForEditing(item) }) {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.glassAccent)
-                            .frame(width: 36, height: 36)
-                            .background(
-                                Circle()
-                                    .fill(Color.glassAccent.opacity(0.12))
-                                    .overlay(Circle().stroke(Color.glassAccent.opacity(0.25), lineWidth: 1))
-                            )
-                    }
-                    .accessibilityLabel("Load full text for editing")
-
-                    // B4: Export share button (only if audio exists)
-                    if item.audioURL != nil {
-                        Button(action: {
-                            exportItem = item
-                            showingExportPicker = true
-                        }) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.glassAccent)
-                                .frame(width: 36, height: 36)
-                                .background(
-                                    Circle()
-                                        .fill(Color.glassAccent.opacity(0.12))
-                                        .overlay(Circle().stroke(Color.glassAccent.opacity(0.25), lineWidth: 1))
-                                )
-                        }
-                        .accessibilityLabel("Export audio")
-                    }
-
-                    // Play button (only if audio file exists)
-                    if item.audioURL != nil {
-                        Button(action: { replayItem(item) }) {
-                            Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(width: 36, height: 36)
-                                .background(
-                                    Circle()
-                                        .fill(LinearGradient(
-                                            colors: [.glassAccent, .glassAccent2],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ))
-                                )
-                        }
-                        .accessibilityLabel(viewModel.isPlaying ? "Pause" : "Play")
-                    }
-
-                    // Delete button
+                // Export/share button
+                if item.audioURL != nil {
                     Button(action: {
-                        if let idx = history.items.firstIndex(where: { $0.id == item.id }) {
-                            history.remove(at: IndexSet(integer: idx))
-                        }
+                        exportItem = item
+                        showingExportPicker = true
                     }) {
-                        Image(systemName: "trash")
+                        Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.glassDanger)
-                            .frame(width: 36, height: 36)
-                            .background(
-                                Circle()
-                                    .fill(Color.glassDanger.opacity(0.12))
-                                    .overlay(Circle().stroke(Color.glassDanger.opacity(0.25), lineWidth: 1))
-                            )
                     }
-                    .accessibilityLabel("Delete")
+                    .buttonStyle(.glass)
+                    .accessibilityLabel("Export audio")
                 }
+
+                // Play button (only if audio file exists)
+                if item.audioURL != nil {
+                    Button(action: { replayItem(item) }) {
+                        Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .buttonStyle(.glassProminent)
+                    .accessibilityLabel(viewModel.isPlaying ? "Pause" : "Play")
+                }
+
+                // Delete button
+                Button(action: {
+                    if let idx = history.items.firstIndex(where: { $0.id == item.id }) {
+                        history.remove(at: IndexSet(integer: idx))
+                    }
+                }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .buttonStyle(.glass)
+                .tint(.red)
+                .accessibilityLabel("Delete")
             }
         }
+        .padding(14)
+        .glassEffect()
     }
 
     // MARK: - Export format picker sheet
 
     private var exportFormatSheet: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 Text("Choose Export Format")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.glassText)
+                    .foregroundStyle(.primary)
                     .padding(.top, 20)
 
                 VStack(spacing: 12) {
@@ -315,28 +258,24 @@ struct HistoryView: View {
                             HStack {
                                 Image(systemName: formatIcon(format))
                                     .font(.system(size: 20))
-                                    .foregroundColor(.glassAccent)
+                                    .foregroundStyle(.tint)
                                     .frame(width: 32)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(format.displayName)
                                         .font(.system(size: 15, weight: .semibold))
-                                        .foregroundColor(.glassText)
+                                        .foregroundStyle(.primary)
                                     Text(formatDescription(format))
                                         .font(.system(size: 12))
-                                        .foregroundColor(.glassTextMuted)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 12))
-                                    .foregroundColor(.glassTextMuted)
+                                    .foregroundStyle(.secondary)
                             }
                             .padding(14)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.glassAccent.opacity(0.07))
-                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.glassAccent.opacity(0.15), lineWidth: 1))
-                            )
                         }
+                        .buttonStyle(.glass)
                     }
                 }
                 .padding(.horizontal, 20)
