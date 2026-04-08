@@ -11,6 +11,12 @@ struct NowPlayingSheet: View {
     @ObservedObject var viewModel: TTSViewModel
     @Binding var isPresented: Bool
 
+    // B4: Export from Now Playing
+    @State private var showingExportNP = false
+    @State private var npExportFormat: AudioExportFormat = .m4a
+    @State private var npExportedFile: ExportedFile?
+    @State private var isExportingNP = false
+
     var body: some View {
         ZStack {
             LiquidGlassBackground()
@@ -169,6 +175,41 @@ struct NowPlayingSheet: View {
                         }
                         .padding(.horizontal, 20)
 
+                        // ── Export button ─────────────────────────────────────
+                        Button(action: { showingExportNP = true }) {
+                            HStack(spacing: 8) {
+                                if isExportingNP {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .glassAccent))
+                                        .scaleEffect(0.85)
+                                } else {
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.system(size: 15, weight: .semibold))
+                                }
+                                Text(isExportingNP ? "Exporting…" : "Export Audio")
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                            .foregroundColor(.glassAccent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(Color.glassAccent.opacity(0.12))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .stroke(Color.glassAccent.opacity(0.25), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .disabled(viewModel.audioURL == nil || isExportingNP)
+                        .padding(.horizontal, 20)
+                        .sheet(isPresented: $showingExportNP) {
+                            npExportSheet
+                        }
+                        .sheet(item: $npExportedFile) { file in
+                            ShareSheet(url: file.url)
+                        }
+
                         // ── Stop button ──────────────────────────────────────
                         Button(action: {
                             viewModel.stopPlayback()
@@ -212,6 +253,103 @@ struct NowPlayingSheet: View {
         let rem = s % 60
         return String(format: "%d:%02d", m, rem)
     }
+
+    // MARK: - Export sheet
+
+    @ViewBuilder
+    private var npExportSheet: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                GlassCard(padding: 20) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Export Format")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.glassTextMuted)
+                            .textCase(.uppercase)
+
+                        ForEach(AudioExportFormat.allCases) { format in
+                            Button(action: { npExportFormat = format }) {
+                                HStack {
+                                    Text(format.displayName)
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.glassText)
+                                    Spacer()
+                                    if npExportFormat == format {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.glassAccent)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+
+                Button(action: { startNPExport() }) {
+                    Label("Export \(npExportFormat.displayName)", systemImage: "square.and.arrow.up")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.glassAccent)
+                .padding(.horizontal, 20)
+                .disabled(isExportingNP)
+
+                Spacer()
+            }
+            .padding(.top, 24)
+            .background(LiquidGlassBackground().ignoresSafeArea())
+            .navigationTitle("Export Audio")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showingExportNP = false }
+                        .foregroundColor(.glassAccent)
+                }
+            }
+        }
+    }
+
+    private func startNPExport() {
+        guard let wavURL = viewModel.audioURL else { return }
+        isExportingNP = true
+        Task {
+            do {
+                let exporter = AudioExporter()
+                let url = try await exporter.export(
+                    wavURL: wavURL,
+                    format: npExportFormat,
+                    title: viewModel.nowPlayingTitle.isEmpty ? "Supertonic TTS" : viewModel.nowPlayingTitle,
+                    artist: "Supertonic TTS"
+                )
+                await MainActor.run {
+                    isExportingNP = false
+                    showingExportNP = false
+                    npExportedFile = ExportedFile(url: url)
+                }
+            } catch {
+                await MainActor.run { isExportingNP = false }
+            }
+        }
+    }
+}
+
+// MARK: - Supporting types
+
+private struct ExportedFile: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+private struct ShareSheet: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Symbol effect helper

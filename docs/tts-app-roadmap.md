@@ -388,8 +388,8 @@ Replace placeholder emoji icons with proper 16 / 48 / 128 px PNG assets.
 | M1.8: Waveform visualiser | 1 | ✅ Complete |
 | M1.9: Chrome extension v1 | 1 | ✅ Complete |
 | M1.10: GitHub Actions CI (iOS + extension) | 1 | ✅ Complete |
-| M2: True pause/resume + skip controls | A | ⬜ Planned |
-| M3: Audio export (MP3 + M4B) | B | ⬜ Planned |
+| M2: True pause/resume + skip controls | A | ✅ Complete |
+| M3: Audio export (MP3 + M4B) | B | ✅ Complete |
 | M4: Safari extension | C | ⬜ Planned |
 | M5: Share Extension | C | ⬜ Planned |
 | M6: iCloud history sync | C | ⬜ Planned |

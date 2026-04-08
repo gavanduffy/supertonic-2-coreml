@@ -4,13 +4,16 @@
 //
 //  Fetches a web page and extracts readable body text suitable for TTS.
 //  Strategy:
-//    1. Fast path — URLSession GET + lightweight regex strip.
-//    2. Fallback — WKWebView (renders JS) + injected extraction script when the
+//    1. Cache check — SHA-256 keyed, 24-hour TTL, stored in Caches directory.
+//    2. Fast path — URLSession GET + lightweight HTML/PDF strip.
+//    3. Fallback — WKWebView (renders JS) + injected extraction script when the
 //       fast path produces fewer than 200 meaningful characters.
 //
 
 import Foundation
 import WebKit
+import PDFKit
+import CryptoKit
 
 // MARK: - Public interface
 
@@ -32,12 +35,52 @@ struct URLTextFetcher {
         }
     }
 
+    // MARK: - Cache (B3)
+
+    private static let cacheTTL: TimeInterval = 86_400  // 24 hours
+
+    private static var cacheDirectory: URL {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let dir = caches.appendingPathComponent("url_text_cache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    private static func cacheKey(for url: URL) -> String {
+        let data = Data(url.absoluteString.utf8)
+        let digest = SHA256.hash(data: data)
+        return digest.compactMap { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func cachedText(for url: URL) -> String? {
+        let file = cacheDirectory.appendingPathComponent(cacheKey(for: url) + ".txt")
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: file.path),
+              let modified = attrs[.modificationDate] as? Date,
+              Date().timeIntervalSince(modified) < cacheTTL,
+              let text = try? String(contentsOf: file, encoding: .utf8),
+              !text.isEmpty else { return nil }
+        return text
+    }
+
+    private static func cache(text: String, for url: URL) {
+        let file = cacheDirectory.appendingPathComponent(cacheKey(for: url) + ".txt")
+        try? text.write(to: file, atomically: true, encoding: .utf8)
+    }
+
+    // MARK: - Public entry
+
     /// Fetches and extracts human-readable plain text from the given URL.
-    /// Uses a WKWebView fallback for JS-heavy pages.
+    /// Checks a 24-hour SHA-256-keyed cache first; uses a WKWebView fallback for JS-heavy pages.
     static func fetchText(from url: URL) async throws -> String {
-        // --- Fast path: plain URLSession GET + HTML strip ---
+        // --- Cache check ---
+        if let cached = cachedText(for: url) {
+            return cached
+        }
+
+        // --- Fast path: plain URLSession GET + HTML/PDF strip ---
         let fastResult = try? await fetchFast(from: url)
         if let text = fastResult, text.count >= 200 {
+            cache(text: text, for: url)
             return text
         }
 
@@ -45,17 +88,20 @@ struct URLTextFetcher {
         do {
             let webText = try await WebViewExtractor.extract(from: url)
             if webText.count >= 50 {
+                cache(text: webText, for: url)
                 return webText
             }
         } catch {
             // If WKWebView also fails, surface the fast path result (or throw)
             if let text = fastResult, !text.isEmpty {
+                cache(text: text, for: url)
                 return text
             }
             throw FetchError.noReadableContent
         }
 
         if let text = fastResult, !text.isEmpty {
+            cache(text: text, for: url)
             return text
         }
         throw FetchError.noReadableContent
@@ -65,11 +111,24 @@ struct URLTextFetcher {
 
     private static func fetchFast(from url: URL) async throws -> String {
         let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
-        let (data, _): (Data, URLResponse)
+        let (data, response): (Data, URLResponse)
         do {
-            (data, _) = try await URLSession.shared.data(for: request)
+            (data, response) = try await URLSession.shared.data(for: request)
         } catch {
             throw FetchError.networkError(error)
+        }
+
+        // B1: PDF detection — check Content-Type header
+        if let httpResponse = response as? HTTPURLResponse,
+           let contentType = httpResponse.value(forHTTPHeaderField: "Content-Type"),
+           contentType.lowercased().contains("application/pdf") {
+            return extractPDFText(from: data)
+        }
+
+        // Also check URL extension as a fallback hint
+        if url.pathExtension.lowercased() == "pdf" {
+            let pdfText = extractPDFText(from: data)
+            if !pdfText.isEmpty { return pdfText }
         }
 
         guard let html = String(data: data, encoding: .utf8)
@@ -82,6 +141,22 @@ struct URLTextFetcher {
             throw FetchError.noReadableContent
         }
         return text
+    }
+
+    // MARK: - PDF extractor (B1)
+
+    /// Extracts plain text from raw PDF data using PDFKit, page by page.
+    private static func extractPDFText(from data: Data) -> String {
+        guard let document = PDFDocument(data: data) else { return "" }
+        var pages: [String] = []
+        for i in 0 ..< document.pageCount {
+            if let page = document.page(at: i),
+               let pageText = page.string,
+               !pageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                pages.append(pageText.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+        }
+        return pages.joined(separator: "\n\n")
     }
 
     // MARK: - Lightweight HTML-to-text extractor
