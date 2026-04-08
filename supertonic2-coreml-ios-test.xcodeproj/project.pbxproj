@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C25F039562F5B1BCE24F8FE4 /* SupertonicResources in Resources */ = {isa = PBXBuildFile; fileRef = 62C426FEB230E12E87E6CCE6 /* SupertonicResources */; };
+		AA000003DEADBEEF00C72E5E /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA000001DEADBEEF00C72E5E /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,6 +26,13 @@
 			remoteGlobalIDString = 1266BC002F1B0DDC00C72E5E;
 			remoteInfo = "supertonic2-coreml-ios-test";
 		};
+		AA000009DEADBEEF00C72E5E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1266BBF92F1B0DDC00C72E5E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA000008DEADBEEF00C72E5E;
+			remoteInfo = ShareExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +44,7 @@
 		62C42702B230E12E87E6CCF2 /* vector_estimator_mlprogram.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper.mlpackage; path = CoreMLModels/coreml_int8/vector_estimator_mlprogram.mlpackage; sourceTree = "<group>"; };
 		62C42703B230E12E87E6CCF3 /* vocoder_mlprogram.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper.mlpackage; path = CoreMLModels/coreml_int8/vocoder_mlprogram.mlpackage; sourceTree = "<group>"; };
 		62C426FEB230E12E87E6CCE6 /* SupertonicResources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = SupertonicResources; sourceTree = "<group>"; };
+		AA000001DEADBEEF00C72E5E /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +61,11 @@
 		1266BC1D2F1B0DDD00C72E5E /* supertonic2-coreml-ios-testUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "supertonic2-coreml-ios-testUITests";
+			sourceTree = "<group>";
+		};
+		AA000002DEADBEEF00C72E5E /* ShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ShareExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -78,6 +92,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA000004DEADBEEF00C72E5E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -92,6 +113,7 @@
 				1266BC032F1B0DDC00C72E5E /* supertonic2-coreml-ios-test */,
 				1266BC132F1B0DDD00C72E5E /* supertonic2-coreml-ios-testTests */,
 				1266BC1D2F1B0DDD00C72E5E /* supertonic2-coreml-ios-testUITests */,
+				AA000002DEADBEEF00C72E5E /* ShareExtension */,
 				1266BC022F1B0DDC00C72E5E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -102,6 +124,7 @@
 				1266BC012F1B0DDC00C72E5E /* supertonic2-coreml-ios-test.app */,
 				1266BC102F1B0DDD00C72E5E /* supertonic2-coreml-ios-testTests.xctest */,
 				1266BC1A2F1B0DDD00C72E5E /* supertonic2-coreml-ios-testUITests.xctest */,
+				AA000001DEADBEEF00C72E5E /* ShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -117,10 +140,12 @@
 				1266BBFE2F1B0DDC00C72E5E /* Frameworks */,
 				7F0B45C32C8F4C1EBEF3A1A1 /* Compile CoreML Models */,
 				1266BBFF2F1B0DDC00C72E5E /* Resources */,
+				AA000007DEADBEEF00C72E5E /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AA00000ADEADBEEF00C72E5E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				1266BC032F1B0DDC00C72E5E /* supertonic2-coreml-ios-test */,
@@ -178,6 +203,28 @@
 			productReference = 1266BC1A2F1B0DDD00C72E5E /* supertonic2-coreml-ios-testUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		AA000008DEADBEEF00C72E5E /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA00000DDEADBEEF00C72E5E /* Build configuration list for PBXNativeTarget "ShareExtension" */;
+			buildPhases = (
+				AA000005DEADBEEF00C72E5E /* Sources */,
+				AA000004DEADBEEF00C72E5E /* Frameworks */,
+				AA000006DEADBEEF00C72E5E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA000002DEADBEEF00C72E5E /* ShareExtension */,
+			);
+			name = ShareExtension;
+			packageProductDependencies = (
+			);
+			productName = ShareExtension;
+			productReference = AA000001DEADBEEF00C72E5E /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -199,6 +246,9 @@
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = 1266BC002F1B0DDC00C72E5E;
 					};
+					AA000008DEADBEEF00C72E5E = {
+						CreatedOnToolsVersion = 26.2;
+					};
 				};
 			};
 			buildConfigurationList = 1266BBFC2F1B0DDC00C72E5E /* Build configuration list for PBXProject "supertonic2-coreml-ios-test" */;
@@ -218,6 +268,7 @@
 				1266BC002F1B0DDC00C72E5E /* supertonic2-coreml-ios-test */,
 				1266BC0F2F1B0DDD00C72E5E /* supertonic2-coreml-ios-testTests */,
 				1266BC192F1B0DDD00C72E5E /* supertonic2-coreml-ios-testUITests */,
+				AA000008DEADBEEF00C72E5E /* ShareExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -239,6 +290,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		1266BC182F1B0DDD00C72E5E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA000006DEADBEEF00C72E5E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -271,6 +329,20 @@
 		};
 /* End PBXShellScriptBuildPhase section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		AA000007DEADBEEF00C72E5E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AA000003DEADBEEF00C72E5E /* ShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		1266BBFD2F1B0DDC00C72E5E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -293,6 +365,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA000005DEADBEEF00C72E5E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -305,6 +384,11 @@
 			isa = PBXTargetDependency;
 			target = 1266BC002F1B0DDC00C72E5E /* supertonic2-coreml-ios-test */;
 			targetProxy = 1266BC1B2F1B0DDD00C72E5E /* PBXContainerItemProxy */;
+		};
+		AA00000ADEADBEEF00C72E5E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA000008DEADBEEF00C72E5E /* ShareExtension */;
+			targetProxy = AA000009DEADBEEF00C72E5E /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -444,6 +528,14 @@
 					ENABLE_USER_SCRIPT_SANDBOXING = NO;
 					ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Supertonic;
+				INFOPLIST_KEY_CFBundleURLTypes = (
+					{
+						CFBundleURLSchemes = (
+							supertonic,
+						);
+					},
+				);
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = "audio";
@@ -483,6 +575,14 @@
 					ENABLE_USER_SCRIPT_SANDBOXING = NO;
 					ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Supertonic;
+				INFOPLIST_KEY_CFBundleURLTypes = (
+					{
+						CFBundleURLSchemes = (
+							supertonic,
+						);
+					},
+				);
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = "audio";
@@ -592,6 +692,62 @@
 			};
 			name = Release;
 		};
+		AA00000BDEADBEEF00C72E5E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "ShareExtension/ShareExtension.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RX9236497X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "ShareExtension/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nbeyzaei.supertonic2-coreml-ios-test.ShareExtension";
+				PRODUCT_NAME = ShareExtension;
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = Nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA00000CDEADBEEF00C72E5E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "ShareExtension/ShareExtension.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RX9236497X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "ShareExtension/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nbeyzaei.supertonic2-coreml-ios-test.ShareExtension";
+				PRODUCT_NAME = ShareExtension;
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = Nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -627,6 +783,15 @@
 			buildConfigurations = (
 				1266BC2B2F1B0DDD00C72E5E /* Debug */,
 				1266BC2C2F1B0DDD00C72E5E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA00000DDEADBEEF00C72E5E /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000BDEADBEEF00C72E5E /* Debug */,
+				AA00000CDEADBEEF00C72E5E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
