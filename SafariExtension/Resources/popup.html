@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supertonic TTS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 320px;
+      min-height: 200px;
+      background: #0f0f13;
+      color: #e8e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #c8b8f8;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      background: #1a1a24;
+      border: 1px solid #2e2e42;
+      border-radius: 8px;
+      color: #e8e8f0;
+      font-size: 13px;
+      padding: 10px;
+      resize: vertical;
+      outline: none;
+      line-height: 1.5;
+    }
+
+    textarea:focus {
+      border-color: #7c5cbf;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      flex: 1;
+      padding: 9px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    button:active { opacity: 0.75; }
+
+    #btnSpeak {
+      background: #7c5cbf;
+      color: #fff;
+    }
+
+    #btnStop {
+      background: #2e2e42;
+      color: #c8b8f8;
+    }
+
+    #status {
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+      min-height: 16px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Supertonic TTS</h1>
+  </header>
+
+  <textarea id="textInput" placeholder="Enter text or use selection from page…"></textarea>
+
+  <div class="controls">
+    <button id="btnSpeak">▶ Speak</button>
+    <button id="btnStop">■ Stop</button>
+  </div>
+
+  <div id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
