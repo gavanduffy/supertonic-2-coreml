@@ -21,6 +21,8 @@ struct HistoryItem: Identifiable, Codable {
     let audioFileName: String?
     let date: Date
     let language: String
+    /// Last playback position in seconds; 0 means start from beginning.
+    var resumePosition: Double
 
     init(
         id: UUID = UUID(),
@@ -29,7 +31,8 @@ struct HistoryItem: Identifiable, Codable {
         sourceURL: String? = nil,
         audioFileName: String? = nil,
         date: Date = Date(),
-        language: String = "en"
+        language: String = "en",
+        resumePosition: Double = 0
     ) {
         self.id = id
         self.title = title
@@ -39,6 +42,7 @@ struct HistoryItem: Identifiable, Codable {
         self.audioFileName = audioFileName
         self.date = date
         self.language = language
+        self.resumePosition = resumePosition
     }
 
     /// Resolved URL for the saved audio file (if it still exists on disk).
@@ -99,6 +103,13 @@ final class HistoryManager: ObservableObject {
             }
             items = Array(items.prefix(Self.maxItems))
         }
+        save()
+    }
+
+    /// Update the saved resume position for a history item.
+    func updateResumePosition(for itemID: UUID, time: Double) {
+        guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
+        items[idx].resumePosition = time
         save()
     }
 

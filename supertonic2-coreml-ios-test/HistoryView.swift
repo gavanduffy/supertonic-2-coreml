@@ -402,7 +402,12 @@ struct HistoryView: View {
             return
         }
         if let url = item.audioURL {
-            viewModel.playExisting(url: url, title: item.title)
+            viewModel.playExisting(
+                url: url,
+                title: item.title,
+                historyItemID: item.id,
+                resumeFrom: item.resumePosition
+            )
         }
     }
 

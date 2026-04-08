@@ -113,6 +113,8 @@ final class TTSViewModel: ObservableObject {
     private var pendingGenerate: Bool = false
     private var pendingModelLoad: Bool = false
     private var pendingLoadReason: ModelLoadReason = .onDemand
+    /// The history item whose audio is currently playing (if any).
+    private var currentPlayingHistoryItemID: UUID?
 
     func startup() {
         // Warm-start the app by loading voices and preloading models.
@@ -272,14 +274,17 @@ final class TTSViewModel: ObservableObject {
     }
 
     func stopPlayback() {
+        saveResumePosition()
         player.stop()
         isPlaying = false
         isPaused = false
         playbackProgress = 0
+        currentPlayingHistoryItemID = nil
         NowPlayingManager.shared.clear()
     }
 
     func pausePlayback() {
+        saveResumePosition()
         player.pause()
         isPlaying = false
         isPaused = true
@@ -298,10 +303,27 @@ final class TTSViewModel: ObservableObject {
     }
 
     /// Play a previously-generated audio file (e.g. from history).
-    func playExisting(url: URL, title: String = "") {
+    /// - Parameters:
+    ///   - url: Audio file URL to play.
+    ///   - title: Display title for the NowPlaying bar.
+    ///   - historyItemID: Optionally track this item so position can be saved on pause/stop.
+    ///   - resumeFrom: Playback will seek to this position (seconds) after starting.
+    func playExisting(url: URL, title: String = "", historyItemID: UUID? = nil, resumeFrom: Double = 0) {
         audioURL = url
         nowPlayingTitle = title.isEmpty ? "Supertonic TTS" : title
+        currentPlayingHistoryItemID = historyItemID
         play(url: url)
+        if resumeFrom > 0 {
+            player.seek(to: resumeFrom)
+        }
+    }
+
+    /// Persist the current playback position back to the history item (if any).
+    private func saveResumePosition() {
+        guard let itemID = currentPlayingHistoryItemID else { return }
+        let t = player.currentTime
+        guard t > 0 else { return }
+        HistoryManager.shared.updateResumePosition(for: itemID, time: t)
     }
 
     private func play(url: URL) {
