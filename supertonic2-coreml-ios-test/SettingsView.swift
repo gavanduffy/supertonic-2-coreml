@@ -40,8 +40,7 @@ struct SettingsView: View {
                 ZStack {
                     Circle()
                         .fill(LinearGradient(
-                            colors: [Color(red: 0.40, green: 0.55, blue: 1.0),
-                                     Color(red: 0.30, green: 0.80, blue: 0.85)],
+                            colors: [.glassAccent, .glassAccent2],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ))
@@ -53,10 +52,10 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Settings")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.glassText)
                     Text("Customise voice, speed, and hardware")
                         .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(.glassTextMuted)
                 }
                 Spacer()
             }
@@ -114,12 +113,12 @@ struct SettingsView: View {
                             .frame(width: 24)
                         Text("Diffusion steps")
                             .font(.system(size: 14))
-                            .foregroundColor(.white)
+                            .foregroundColor(.glassText)
                     }
                     Spacer()
                     Stepper("\(viewModel.steps)", value: $viewModel.steps, in: 1...30)
                         .labelsHidden()
-                        .foregroundColor(.white)
+                        .foregroundColor(.glassText)
                     Text("\(viewModel.steps)")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.glassAccent)
@@ -137,7 +136,7 @@ struct SettingsView: View {
                             .frame(width: 24)
                         Text("Speed")
                             .font(.system(size: 14))
-                            .foregroundColor(.white)
+                            .foregroundColor(.glassText)
                         Spacer()
                         Text(String(format: "%.2f×", viewModel.speed))
                             .font(.system(size: 14, weight: .semibold))
@@ -157,7 +156,7 @@ struct SettingsView: View {
                             .frame(width: 24)
                         Text("Silence between chunks")
                             .font(.system(size: 14))
-                            .foregroundColor(.white)
+                            .foregroundColor(.glassText)
                         Spacer()
                         Text(String(format: "%.2fs", viewModel.silenceSeconds))
                             .font(.system(size: 14, weight: .semibold))
@@ -179,7 +178,7 @@ struct SettingsView: View {
 
                 Text("'All' uses the Neural Engine when available for fastest inference.")
                     .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(.glassTextMuted)
 
                 Picker("Compute units", selection: $viewModel.computeUnits) {
                     ForEach(TTSService.ComputeUnits.allCases) { unit in
@@ -219,10 +218,10 @@ struct SettingsView: View {
         VStack(spacing: 3) {
             Text(value)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(.glassText)
             Text(label)
                 .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.45))
+                .foregroundColor(.glassTextMuted)
         }
         .frame(maxWidth: .infinity)
     }
@@ -241,7 +240,7 @@ struct SettingsView: View {
                 .frame(width: 24)
             Text(label)
                 .font(.system(size: 14))
-                .foregroundColor(.white)
+                .foregroundColor(.glassText)
             Spacer()
             content()
         }

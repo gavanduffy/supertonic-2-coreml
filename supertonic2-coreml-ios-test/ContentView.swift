@@ -25,6 +25,7 @@ private struct VariableColorSymbolEffect: ViewModifier {
 
 struct ContentView: View {
     @StateObject private var viewModel = TTSViewModel()
+    @State private var showNowPlaying = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -56,7 +57,7 @@ struct ContentView: View {
                     }
             }
             .toolbarBackground(.ultraThinMaterial, for: .tabBar)
-            .toolbarColorScheme(.dark, for: .tabBar)
+            .toolbarColorScheme(.light, for: .tabBar)
 
             // Mini NowPlaying bar — floats above the tab bar when playing.
             if viewModel.isPlaying || viewModel.isPaused || viewModel.audioURL != nil {
@@ -65,11 +66,17 @@ struct ContentView: View {
                     .padding(.bottom, 58)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .animation(.spring(response: 0.4, dampingFraction: 0.75), value: viewModel.isPlaying)
+                    .onTapGesture { showNowPlaying = true }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel("Open Now Playing")
             }
         }
         .onAppear { viewModel.startup() }
         .onChange(of: viewModel.computeUnits) { _ in
             viewModel.reloadModels()
+        }
+        .sheet(isPresented: $showNowPlaying) {
+            NowPlayingSheet(viewModel: viewModel, isPresented: $showNowPlaying)
         }
     }
 }
@@ -100,26 +107,36 @@ struct MiniPlayerBar: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(viewModel.nowPlayingTitle.isEmpty ? "Supertonic TTS" : viewModel.nowPlayingTitle)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.glassText)
                         .lineLimit(1)
                     if viewModel.isPlaying && viewModel.playbackRemaining > 0 {
                         Text(timeString(viewModel.playbackRemaining) + " remaining")
                             .font(.system(size: 11))
-                            .foregroundColor(.white.opacity(0.55))
+                            .foregroundColor(.glassTextMuted)
                     } else if viewModel.isPaused {
                         Text("Paused")
                             .font(.system(size: 11))
-                            .foregroundColor(.glassAccent.opacity(0.75))
+                            .foregroundColor(.glassAccent.opacity(0.85))
                     } else {
                         Text("Ready to play")
                             .font(.system(size: 11))
-                            .foregroundColor(.white.opacity(0.55))
+                            .foregroundColor(.glassTextMuted)
                     }
                 }
 
                 Spacer()
 
-                // Play / Stop button
+                // Skip backward 15 s
+                Button(action: { viewModel.skipBackward() }) {
+                    Image(systemName: "gobackward.15")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.glassAccent)
+                        .frame(width: 34, height: 34)
+                }
+                .accessibilityLabel("Skip back 15 seconds")
+                .disabled(!viewModel.isPlaying && !viewModel.isPaused)
+
+                // Play / Pause button
                 Button(action: { viewModel.togglePlay() }) {
                     Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 18, weight: .semibold))
@@ -127,11 +144,21 @@ struct MiniPlayerBar: View {
                         .frame(width: 40, height: 40)
                         .background(
                             Circle()
-                                .fill(Color.glassAccent.opacity(0.15))
-                                .overlay(Circle().stroke(Color.glassAccent.opacity(0.3), lineWidth: 1))
+                                .fill(Color.glassAccent.opacity(0.12))
+                                .overlay(Circle().stroke(Color.glassAccent.opacity(0.25), lineWidth: 1))
                         )
                 }
                 .accessibilityLabel(viewModel.isPlaying ? "Pause playback" : "Play audio")
+
+                // Skip forward 15 s
+                Button(action: { viewModel.skipForward() }) {
+                    Image(systemName: "goforward.15")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.glassAccent)
+                        .frame(width: 34, height: 34)
+                }
+                .accessibilityLabel("Skip forward 15 seconds")
+                .disabled(!viewModel.isPlaying && !viewModel.isPaused)
             }
 
             // Progress bar
@@ -139,7 +166,7 @@ struct MiniPlayerBar: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color.white.opacity(0.15))
+                            .fill(Color.black.opacity(0.08))
                             .frame(height: 2)
                         Capsule()
                             .fill(LinearGradient(
@@ -213,10 +240,10 @@ struct ReadView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Supertonic TTS")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.glassText)
                     Text("On-device · Int8 CoreML pipeline")
                         .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(.glassTextMuted)
                 }
 
                 Spacer()
@@ -228,7 +255,7 @@ struct ReadView: View {
                             .scaleEffect(0.8)
                         Text(viewModel.loadingMessage)
                             .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(.glassTextMuted)
                             .multilineTextAlignment(.trailing)
                     }
                 } else if !viewModel.availableVoices.isEmpty {
@@ -338,10 +365,10 @@ struct ReadView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "memorychip")
                                 .font(.system(size: 11))
-                                .foregroundColor(.white.opacity(0.5))
+                                .foregroundColor(.glassTextMuted)
                             Text(String(format: "%.1f MB → %.1f MB", before, after))
                                 .font(.system(size: 12))
-                                .foregroundColor(.white.opacity(0.55))
+                                .foregroundColor(.glassTextMuted)
                         }
                     }
                 }
@@ -353,10 +380,10 @@ struct ReadView: View {
         VStack(spacing: 3) {
             Text(value)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(.glassText)
             Text(label)
                 .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(.glassTextMuted)
         }
         .frame(maxWidth: .infinity)
     }
@@ -380,16 +407,16 @@ struct ReadView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(sample.title)
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.glassText)
                                 Text(sample.text)
                                     .font(.system(size: 11))
-                                    .foregroundColor(.white.opacity(0.5))
+                                    .foregroundColor(.glassTextMuted)
                                     .lineLimit(2)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.3))
+                                .foregroundColor(.glassTextMuted)
                         }
                         .padding(.vertical, 6)
                     }

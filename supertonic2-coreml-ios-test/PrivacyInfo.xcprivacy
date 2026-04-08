@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- The app does not track users. -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <!-- No tracking domains contacted. -->
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <!-- No user data is collected. -->
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+
+    <!-- Required API access declarations. -->
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <!--
+            File timestamp APIs are used when reading/writing audio cache files and
+            history JSON on the local device. No data leaves the device.
+            Approved reason: C617.1 — Read/write own app files.
+        -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>C617.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

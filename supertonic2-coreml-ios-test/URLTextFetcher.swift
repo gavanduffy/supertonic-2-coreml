@@ -3,9 +3,16 @@
 //  supertonic2-coreml-ios-test
 //
 //  Fetches a web page and extracts readable body text suitable for TTS.
+//  Strategy:
+//    1. Fast path — URLSession GET + lightweight regex strip.
+//    2. Fallback — WKWebView (renders JS) + injected extraction script when the
+//       fast path produces fewer than 200 meaningful characters.
 //
 
 import Foundation
+import WebKit
+
+// MARK: - Public interface
 
 struct URLTextFetcher {
     enum FetchError: LocalizedError {
@@ -26,7 +33,37 @@ struct URLTextFetcher {
     }
 
     /// Fetches and extracts human-readable plain text from the given URL.
+    /// Uses a WKWebView fallback for JS-heavy pages.
     static func fetchText(from url: URL) async throws -> String {
+        // --- Fast path: plain URLSession GET + HTML strip ---
+        let fastResult = try? await fetchFast(from: url)
+        if let text = fastResult, text.count >= 200 {
+            return text
+        }
+
+        // --- Slow path: render with WKWebView ---
+        do {
+            let webText = try await WebViewExtractor.extract(from: url)
+            if webText.count >= 50 {
+                return webText
+            }
+        } catch {
+            // If WKWebView also fails, surface the fast path result (or throw)
+            if let text = fastResult, !text.isEmpty {
+                return text
+            }
+            throw FetchError.noReadableContent
+        }
+
+        if let text = fastResult, !text.isEmpty {
+            return text
+        }
+        throw FetchError.noReadableContent
+    }
+
+    // MARK: - Fast path
+
+    private static func fetchFast(from url: URL) async throws -> String {
         let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
         let (data, _): (Data, URLResponse)
         do {
@@ -47,17 +84,17 @@ struct URLTextFetcher {
         return text
     }
 
-    // MARK: - Private HTML parsing
+    // MARK: - Lightweight HTML-to-text extractor
 
     /// Lightweight HTML-to-text extractor — no dependencies required.
-    private static func extractReadableText(from html: String) -> String {
+    static func extractReadableText(from html: String) -> String {
         var text = html
 
         // Remove <style> blocks.
         text = removeTags(named: "style", from: text)
         // Remove <script> blocks.
         text = removeTags(named: "script", from: text)
-        // Remove <nav>, <header>, <footer>, <aside>.
+        // Remove <nav>, <header>, <footer>, <aside>, <form>.
         for tag in ["nav", "header", "footer", "aside", "form"] {
             text = removeTags(named: tag, from: text)
         }
@@ -124,9 +161,7 @@ struct URLTextFetcher {
         for match in matches {
             let fullRange = match.range
             let captureRange = match.range(at: 1)
-            // Append text before match.
             result += nsText.substring(with: NSRange(location: lastEnd, length: fullRange.location - lastEnd))
-            // Decode the captured number.
             let numStr = nsText.substring(with: captureRange)
             if let codePoint = UInt32(numStr, radix: hex ? 16 : 10),
                let scalar = Unicode.Scalar(codePoint) {
@@ -135,6 +170,138 @@ struct URLTextFetcher {
             lastEnd = fullRange.location + fullRange.length
         }
         result += nsText.substring(from: lastEnd)
+        return result
+    }
+}
+
+// MARK: - WKWebView-based extractor
+
+/// Renders the page in a headless WKWebView, then injects a JS extraction
+/// script to pull the article body text. Works for SPAs and JS-rendered pages.
+@MainActor
+private final class WebViewExtractor: NSObject, WKNavigationDelegate {
+
+    private let webView: WKWebView
+    private var continuation: CheckedContinuation<String, Error>?
+    private var hasFinished = false
+
+    // JS that walks the DOM and extracts readable text, mimicking Readability heuristics.
+    private static let extractionScript = """
+    (function() {
+        // Remove boilerplate containers.
+        var boilerplate = ['nav','header','footer','aside','form',
+                           '[role="navigation"]','[role="banner"]','[role="contentinfo"]',
+                           '.cookie-banner','.ad','.ads','.advertisement'];
+        boilerplate.forEach(function(sel) {
+            try {
+                document.querySelectorAll(sel).forEach(function(el){ el.remove(); });
+            } catch(e){}
+        });
+        // Prefer <article>, <main>, or the element with the most text.
+        var candidates = ['article','[role="main"]','main','.post-content',
+                          '.article-body','.entry-content','.content','#content','body'];
+        var best = null;
+        for (var i = 0; i < candidates.length; i++) {
+            var el = document.querySelector(candidates[i]);
+            if (el && el.innerText && el.innerText.trim().length > 100) {
+                best = el;
+                break;
+            }
+        }
+        if (!best) best = document.body;
+        if (!best) return '';
+        // Collect text, preserving paragraph breaks.
+        var blocks = best.querySelectorAll('p,h1,h2,h3,h4,h5,h6,li,blockquote');
+        if (blocks.length > 3) {
+            return Array.from(blocks)
+                .map(function(b){ return b.innerText.trim(); })
+                .filter(function(t){ return t.length > 0; })
+                .join('\\n');
+        }
+        return best.innerText || '';
+    })();
+    """
+
+    private init(url: URL) {
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .nonPersistent()
+        self.webView = WKWebView(frame: .zero, configuration: config)
+        super.init()
+        webView.navigationDelegate = self
+    }
+
+    static func extract(from url: URL, timeout: TimeInterval = 15) async throws -> String {
+        let extractor = WebViewExtractor(url: url)
+        return try await withTimeout(seconds: timeout) {
+            try await extractor.run(url: url)
+        }
+    }
+
+    private func run(url: URL) async throws -> String {
+        return try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+            let request = URLRequest(url: url, timeoutInterval: 12)
+            webView.load(request)
+        }
+    }
+
+    // MARK: WKNavigationDelegate
+
+    nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        Task { @MainActor in
+            guard !self.hasFinished else { return }
+            // Give JS a brief moment to run after didFinish.
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            self.extractAndFinish()
+        }
+    }
+
+    nonisolated func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        Task { @MainActor in
+            self.finish(with: .failure(URLTextFetcher.FetchError.networkError(error)))
+        }
+    }
+
+    nonisolated func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        Task { @MainActor in
+            self.finish(with: .failure(URLTextFetcher.FetchError.networkError(error)))
+        }
+    }
+
+    private func extractAndFinish() {
+        webView.evaluateJavaScript(Self.extractionScript) { [weak self] result, error in
+            guard let self = self else { return }
+            if let text = result as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let cleaned = URLTextFetcher.extractReadableText(from: text)
+                self.finish(with: .success(cleaned.isEmpty ? text : cleaned))
+            } else {
+                self.finish(with: .failure(URLTextFetcher.FetchError.noReadableContent))
+            }
+        }
+    }
+
+    private func finish(with result: Result<String, Error>) {
+        guard !hasFinished else { return }
+        hasFinished = true
+        continuation?.resume(with: result)
+        continuation = nil
+    }
+}
+
+// MARK: - Timeout helper
+
+private func withTimeout<T: Sendable>(
+    seconds: TimeInterval,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask { try await operation() }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw URLTextFetcher.FetchError.noReadableContent
+        }
+        let result = try await group.next()!
+        group.cancelAll()
         return result
     }
 }

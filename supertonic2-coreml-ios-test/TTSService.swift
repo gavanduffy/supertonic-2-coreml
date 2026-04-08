@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreML
+import NaturalLanguage
 
 final class TTSService {
     enum Language: String, CaseIterable, Identifiable {
@@ -541,6 +542,25 @@ final class TTSService {
     }
 
     private func splitSentences(_ text: String) -> [String] {
+        // Use NLTokenizer for accurate sentence segmentation across all supported languages.
+        let tokenizer = NLTokenizer(unit: .sentence)
+        tokenizer.string = text
+        var sentences: [String] = []
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
+            let sentence = String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !sentence.isEmpty { sentences.append(sentence) }
+            return true
+        }
+        // If NLTokenizer produced nothing (empty string, unsupported script, etc.) fall back to the
+        // original regex-based splitter so callers always receive at least one element.
+        if sentences.isEmpty {
+            return splitSentencesFallback(text)
+        }
+        return sentences
+    }
+
+    /// Regex-based fallback used when NLTokenizer yields no results.
+    private func splitSentencesFallback(_ text: String) -> [String] {
         let abbreviations: Set<String> = [
             "Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "Sr.", "Jr.",
             "St.", "Ave.", "Rd.", "Blvd.", "Dept.", "Inc.", "Ltd.",

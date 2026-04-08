@@ -1,14 +1,14 @@
-/* popup.css — iOS 26 "Liquid Glass" inspired */
+/* popup.css — Warm White + Burnt Orange */
 
 :root {
-  --bg-start:     #0d0a1f;
-  --bg-end:       #0a0f2e;
-  --glass:        rgba(255, 255, 255, 0.07);
-  --glass-border: rgba(255, 255, 255, 0.16);
-  --accent:       #20ccf5;
-  --accent2:      #a672ff;
-  --text:         #f0f0ff;
-  --text-muted:   rgba(240, 240, 255, 0.50);
+  --bg-start:     #f9f6f0;
+  --bg-end:       #f2ece0;
+  --glass:        rgba(0, 0, 0, 0.04);
+  --glass-border: rgba(0, 0, 0, 0.09);
+  --accent:       #cc5914;
+  --accent2:      #f29919;
+  --text:         #1a140e;
+  --text-muted:   rgba(26, 20, 14, 0.48);
   --danger:       #ff4558;
   --radius:       16px;
   --radius-sm:    10px;
@@ -135,13 +135,13 @@ body {
 
 .divider {
   height: 1px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(0, 0, 0, 0.07);
   margin: 2px 0;
 }
 
 select {
   flex: 1;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.04);
   color: var(--text);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
@@ -201,7 +201,7 @@ input[type="range"] {
 .btn.primary {
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   color: #fff;
-  box-shadow: 0 4px 18px rgba(32, 204, 245, 0.30);
+  box-shadow: 0 4px 18px rgba(204, 89, 20, 0.28);
 }
 
 .btn.secondary {
@@ -211,15 +211,15 @@ input[type="range"] {
 }
 
 .btn.danger {
-  background: rgba(255, 69, 88, 0.15);
-  border: 1px solid rgba(255, 69, 88, 0.30);
+  background: rgba(255, 69, 88, 0.10);
+  border: 1px solid rgba(255, 69, 88, 0.25);
   color: var(--danger);
 }
 
 /* ─── Error ────────────────────────────────────────────────────────────────── */
 .error {
-  background: rgba(255, 69, 88, 0.12);
-  border: 1px solid rgba(255, 69, 88, 0.28);
+  background: rgba(255, 69, 88, 0.10);
+  border: 1px solid rgba(255, 69, 88, 0.25);
   color: var(--danger);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
@@ -232,4 +232,3 @@ input[type="range"] {
 .hidden {
   display: none !important;
 }
-

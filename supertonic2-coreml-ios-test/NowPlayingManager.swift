@@ -59,12 +59,16 @@ final class NowPlayingManager {
 
     // MARK: - Remote command registration
 
-    /// Register play/pause/stop remote commands.  Pass closures from the
-    /// ViewModel so the manager stays decoupled from business logic.
+    /// Register play/pause/stop and optional skip remote commands.
+    /// Pass closures from the ViewModel so the manager stays decoupled from
+    /// business logic.  Providing skip handlers also enables the skip
+    /// forward/backward buttons in Control Centre and on the lock screen.
     func registerCommands(
         onPlay: @escaping () -> Void,
         onPause: @escaping () -> Void,
-        onStop: @escaping () -> Void
+        onStop: @escaping () -> Void,
+        onSkipForward: (() -> Void)? = nil,
+        onSkipBackward: (() -> Void)? = nil
     ) {
         let commandCenter = MPRemoteCommandCenter.shared()
 
@@ -86,10 +90,31 @@ final class NowPlayingManager {
             return .success
         }
 
-        // Disable commands that aren't supported yet.
+        // Disable track-level commands (not applicable for TTS).
         commandCenter.nextTrackCommand.isEnabled = false
         commandCenter.previousTrackCommand.isEnabled = false
-        commandCenter.skipForwardCommand.isEnabled = false
-        commandCenter.skipBackwardCommand.isEnabled = false
+
+        // Skip forward / backward (15 s each).
+        if let skipForward = onSkipForward {
+            commandCenter.skipForwardCommand.isEnabled = true
+            commandCenter.skipForwardCommand.preferredIntervals = [15]
+            commandCenter.skipForwardCommand.addTarget { _ in
+                skipForward()
+                return .success
+            }
+        } else {
+            commandCenter.skipForwardCommand.isEnabled = false
+        }
+
+        if let skipBackward = onSkipBackward {
+            commandCenter.skipBackwardCommand.isEnabled = true
+            commandCenter.skipBackwardCommand.preferredIntervals = [15]
+            commandCenter.skipBackwardCommand.addTarget { _ in
+                skipBackward()
+                return .success
+            }
+        } else {
+            commandCenter.skipBackwardCommand.isEnabled = false
+        }
     }
 }

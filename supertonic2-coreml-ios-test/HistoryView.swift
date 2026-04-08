@@ -39,23 +39,23 @@ struct HistoryView: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color.glassAccent2.opacity(0.15))
+                    .fill(Color.glassAccent.opacity(0.12))
                     .frame(width: 100, height: 100)
                 Circle()
-                    .stroke(Color.glassAccent2.opacity(0.3), lineWidth: 1.5)
+                    .stroke(Color.glassAccent.opacity(0.25), lineWidth: 1.5)
                     .frame(width: 100, height: 100)
                 Image(systemName: "clock.arrow.circlepath")
                     .font(.system(size: 40, weight: .light))
-                    .foregroundColor(.glassAccent2)
+                    .foregroundColor(.glassAccent)
             }
 
             VStack(spacing: 8) {
                 Text("No history yet")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.glassText)
                 Text("Items you read aloud will appear here.\nYou can replay or load them for editing.")
                     .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.55))
+                    .foregroundColor(.glassTextMuted)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
             }
@@ -76,7 +76,7 @@ struct HistoryView: View {
                             ZStack {
                                 Circle()
                                     .fill(LinearGradient(
-                                        colors: [.glassAccent2, Color(red: 0.50, green: 0.30, blue: 1.0)],
+                                        colors: [.glassAccent, .glassAccent2],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ))
@@ -88,10 +88,10 @@ struct HistoryView: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("Reading History")
                                     .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.glassText)
                                 Text("\(history.items.count) item\(history.items.count == 1 ? "" : "s")")
                                     .font(.system(size: 12))
-                                    .foregroundColor(.white.opacity(0.55))
+                                    .foregroundColor(.glassTextMuted)
                             }
                             Spacer()
                             Button(action: { history.clearAll() }) {
@@ -126,19 +126,19 @@ struct HistoryView: View {
                 HStack(spacing: 8) {
                     Text(item.title)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.glassText)
                         .lineLimit(1)
                     Spacer()
                     GlassStatusPill(
                         text: item.language.uppercased(),
-                        color: .glassAccent2
+                        color: .glassAccent
                     )
                 }
 
                 // Preview text
                 Text(item.textPreview)
                     .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.55))
+                    .foregroundColor(.glassTextMuted)
                     .lineLimit(2)
 
                 GlassDivider()
@@ -148,10 +148,10 @@ struct HistoryView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.4))
+                            .foregroundColor(.glassTextMuted)
                         Text(dateFormatter.string(from: item.date))
                             .font(.system(size: 11))
-                            .foregroundColor(.white.opacity(0.45))
+                            .foregroundColor(.glassTextMuted)
                     }
 
                     Spacer()
@@ -160,12 +160,12 @@ struct HistoryView: View {
                     Button(action: { loadItemForEditing(item) }) {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.glassAccent2)
+                            .foregroundColor(.glassAccent)
                             .frame(width: 36, height: 36)
                             .background(
                                 Circle()
-                                    .fill(Color.glassAccent2.opacity(0.12))
-                                    .overlay(Circle().stroke(Color.glassAccent2.opacity(0.25), lineWidth: 1))
+                                    .fill(Color.glassAccent.opacity(0.12))
+                                    .overlay(Circle().stroke(Color.glassAccent.opacity(0.25), lineWidth: 1))
                             )
                     }
                     .accessibilityLabel("Load full text for editing")

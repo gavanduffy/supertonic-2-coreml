@@ -25,6 +25,19 @@ final class AudioPlayer: NSObject, AVAudioPlayerDelegate {
     /// Whether the player is actively playing (not paused).
     var isPlaying: Bool { player?.isPlaying ?? false }
 
+    /// Normalised RMS meter levels per channel, each in [0, 1].
+    /// Sampled from the latest `updateMeters()` call; returns empty array when idle.
+    var meterLevels: [Float] {
+        guard let player else { return [] }
+        let count = player.numberOfChannels
+        return (0 ..< count).map { ch in
+            let db = player.averagePower(forChannel: ch)
+            // Map -60 dB … 0 dB → 0 … 1 (clamp below -60 to zero)
+            let norm = (db + 60) / 60
+            return max(0, min(1, norm))
+        }
+    }
+
     func play(url: URL, onFinish: (() -> Void)? = nil) {
         self.onFinish = onFinish
         stopProgressTimer()
@@ -38,6 +51,7 @@ final class AudioPlayer: NSObject, AVAudioPlayerDelegate {
             let player = try AVAudioPlayer(data: data)
             player.delegate = self
             player.volume = 1.0
+            player.isMeteringEnabled = true
             player.prepareToPlay()
             player.play()
             self.player = player
@@ -66,6 +80,15 @@ final class AudioPlayer: NSObject, AVAudioPlayerDelegate {
         player = nil
     }
 
+    /// Seek to an absolute position in the current audio file.
+    /// - Parameter time: Target position in seconds; clamped to [0, duration].
+    func seek(to time: TimeInterval) {
+        guard let player else { return }
+        player.currentTime = max(0, min(time, player.duration))
+        // Emit a progress update immediately so the UI reflects the change.
+        onProgress?(player.currentTime, player.duration)
+    }
+
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         stopProgressTimer()
         onFinish?()
@@ -76,6 +99,7 @@ final class AudioPlayer: NSObject, AVAudioPlayerDelegate {
     private func startProgressTimer() {
         progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self, let p = self.player else { return }
+            p.updateMeters()
             self.onProgress?(p.currentTime, p.duration)
         }
     }

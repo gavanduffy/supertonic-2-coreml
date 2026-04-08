@@ -44,7 +44,7 @@ struct URLInputView: View {
                 ZStack {
                     Circle()
                         .fill(LinearGradient(
-                            colors: [.glassAccent2, Color(red: 0.50, green: 0.30, blue: 1.0)],
+                            colors: [.glassAccent, .glassAccent2],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ))
@@ -56,10 +56,10 @@ struct URLInputView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Read from URL")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.glassText)
                     Text("Paste a link and we'll extract the article")
                         .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(.glassTextMuted)
                 }
                 Spacer()
             }
@@ -114,7 +114,7 @@ struct URLInputView: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: .glassAccent))
                 Text("Extracting article text…")
                     .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(.glassTextMuted)
                 Spacer()
             }
         }
@@ -146,7 +146,7 @@ struct URLInputView: View {
 
                 Text(viewModel.text)
                     .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(0.75))
+                    .foregroundColor(.glassText)
                     .lineLimit(12)
                     .fixedSize(horizontal: false, vertical: true)
 

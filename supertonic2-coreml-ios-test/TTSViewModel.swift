@@ -86,6 +86,8 @@ final class TTSViewModel: ObservableObject {
     @Published var playbackProgress: Double = 0
     /// Remaining seconds of current audio.
     @Published var playbackRemaining: Double = 0
+    /// Normalised meter levels [0…1] per channel, updated every 0.5 s while playing.
+    @Published var meterLevels: [Float] = []
 
     let samples: [SamplePrompt] = [
         SamplePrompt(
@@ -118,16 +120,20 @@ final class TTSViewModel: ObservableObject {
         warmUpModels()
         // Register remote command handlers for lock-screen control.
         NowPlayingManager.shared.registerCommands(
-            onPlay:  { [weak self] in DispatchQueue.main.async { self?.resumeOrPlay() } },
-            onPause: { [weak self] in DispatchQueue.main.async { self?.pausePlayback() } },
-            onStop:  { [weak self] in DispatchQueue.main.async { self?.stopPlayback() } }
+            onPlay:         { [weak self] in DispatchQueue.main.async { self?.resumeOrPlay() } },
+            onPause:        { [weak self] in DispatchQueue.main.async { self?.pausePlayback() } },
+            onStop:         { [weak self] in DispatchQueue.main.async { self?.stopPlayback() } },
+            onSkipForward:  { [weak self] in DispatchQueue.main.async { self?.skipForward() } },
+            onSkipBackward: { [weak self] in DispatchQueue.main.async { self?.skipBackward() } }
         )
         // Wire progress updates from the audio player.
         player.onProgress = { [weak self] current, total in
             guard let self, total > 0 else { return }
+            let levels = self.player.meterLevels
             DispatchQueue.main.async {
                 self.playbackProgress = current / total
                 self.playbackRemaining = max(0, total - current)
+                self.meterLevels = levels
                 NowPlayingManager.shared.updateElapsed(current)
             }
         }
@@ -232,6 +238,37 @@ final class TTSViewModel: ObservableObject {
         } else if let url = audioURL {
             play(url: url)
         }
+    }
+
+    /// Skip forward 15 seconds in the current playback.
+    func skipForward() {
+        guard isPlaying || isPaused else { return }
+        player.seek(to: player.currentTime + 15)
+        NowPlayingManager.shared.updateElapsed(player.currentTime, rate: isPlaying ? 1 : 0)
+    }
+
+    /// Skip backward 15 seconds in the current playback.
+    func skipBackward() {
+        guard isPlaying || isPaused else { return }
+        player.seek(to: player.currentTime - 15)
+        NowPlayingManager.shared.updateElapsed(player.currentTime, rate: isPlaying ? 1 : 0)
+    }
+
+    /// Total duration of the currently-loaded audio file (0 if none).
+    var totalDuration: Double {
+        player.duration
+    }
+
+    /// Current playback position in seconds.
+    var currentTime: Double {
+        player.currentTime
+    }
+
+    /// Seek to an absolute time in the current audio.
+    func seekTo(_ time: Double) {
+        guard isPlaying || isPaused else { return }
+        player.seek(to: time)
+        NowPlayingManager.shared.updateElapsed(player.currentTime, rate: isPlaying ? 1 : 0)
     }
 
     func stopPlayback() {

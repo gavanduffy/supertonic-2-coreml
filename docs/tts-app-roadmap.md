@@ -1,6 +1,6 @@
 # Supertonic TTS — Full-Featured App Roadmap
 
-> Last updated: 2026-03-07  
+> Last updated: 2026-04-08  
 > Scope: iOS TTS app + Safari/Chrome browser extension
 
 ---
@@ -13,7 +13,7 @@ Turn the current CoreML proof-of-concept into a **production-ready "read-aloud" 
 2. Fetches and extracts readable text from any pasted URL.
 3. Receives text/URLs shared from other apps via a **Share Extension**.
 4. Pairs with a **browser extension** (Safari on iOS/macOS, Chrome on desktop) so the user can send any article to the app or hear it read aloud in-browser.
-5. Maintains a **reading history** so the user can replay past items.
+5. Maintains a **reading history** so the user can replay past items and export audio.
 6. Runs all TTS inference on-device with no network round-trip using the Supertonic 2 CoreML pipeline.
 
 Reference product for UX inspiration: [TLDRL Lightning TTS](https://chromewebstore.google.com/detail/tldrl-lightning-tts-power/mdbiaajonlkomihpcaffhkagodbcgbme).
@@ -24,9 +24,9 @@ Reference product for UX inspiration: [TLDRL Lightning TTS](https://chromewebsto
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                       iOS / iPadOS App                   │
+│                        iOS App                           │
 │  ┌──────────┐  ┌────────────┐  ┌──────────────────────┐  │
-│  │ Text Tab │  │  URL Tab   │  │   History Tab        │  │
+│  │ Read Tab │  │  URL Tab   │  │   History Tab        │  │
 │  └──────────┘  └────────────┘  └──────────────────────┘  │
 │        │              │                   │               │
 │        └──────────────┴───────────────────┘               │
@@ -35,12 +35,13 @@ Reference product for UX inspiration: [TLDRL Lightning TTS](https://chromewebsto
 │                       │                                   │
 │          ┌────────────┴────────────┐                      │
 │          │ URLTextFetcher          │  HistoryManager      │
-│          │ (URLSession + parser)   │  (SwiftData / JSON)  │
+│          │ (URLSession + WKWebView)│  (JSON / Documents)  │
 │          └─────────────────────────┘                      │
 │                       │                                   │
 │              TTSService (CoreML pipeline)                 │
 │              AudioPlayer (AVFoundation)                   │
 │              NowPlayingManager (MediaPlayer)              │
+│              AudioExporter (AVAssetWriter)                │
 └──────────────────────────────────────────────────────────┘
          ▲                              ▲
          │ Share Extension              │ App Group (shared container)
@@ -58,45 +59,68 @@ Reference product for UX inspiration: [TLDRL Lightning TTS](https://chromewebsto
 
 ### 1.1 Tab-Based Navigation ✅
 
-Replace the single-screen layout with a `TabView`:
-
 | Tab | Content |
 |-----|---------|
-| **Read** | Text editor + Generate/Play controls (existing behaviour) |
+| **Read** | Text editor + Generate/Play controls |
 | **URL** | URL input field → fetch → preview extracted text → speak |
-| **History** | List of past TTS items with replay button |
+| **History** | List of past TTS items with replay, export, and delete |
 | **Settings** | Voice, speed, steps, compute units |
 
 ### 1.2 URL Text Fetcher (`URLTextFetcher.swift`) ✅
 
 - Takes a `URL`, fetches raw HTML with `URLSession`.
-- Strips tags, scripts, and navigation boilerplate using a lightweight regex-based parser (no third-party dependencies).
-- Falls back to the raw body text if parsing yields less than 100 characters.
+- Strips tags, scripts, and navigation boilerplate using a lightweight regex-based parser.
+- **WKWebView Readability fallback** — if the plain fetch returns less than ~300 characters, falls back to loading the URL in a headless `WKWebView` with a JS-based extraction pass.
 - Exposes an `async throws` API consumed by `TTSViewModel`.
 
 ### 1.3 Clipboard Paste Button ✅
 
-- "Paste from Clipboard" button in both the Text tab and the URL tab.
+- "Paste from Clipboard" button in the Text tab and the URL tab.
 - Detects whether clipboard content is a URL or plain text and routes accordingly.
 
 ### 1.4 Reading History (`HistoryManager.swift`) ✅
 
-- Persists `HistoryItem` records (title, source URL or text snippet, date, audio file URL) to `UserDefaults` / JSON in the app's documents directory.
+- Persists `HistoryItem` records (title, source URL or text snippet, date, audio file path) to JSON in the app's Documents directory.
 - Displayed in the **History** tab with play/delete actions.
 - Limited to the 50 most-recent items to cap storage.
 
 ### 1.5 iOS 26 Liquid Glass Design ✅
 
-- `GlassComponents.swift` — design system providing `GlassCard`, `GlassPrimaryButtonStyle`, `GlassSecondaryButtonStyle`, `GlassDestructiveButtonStyle`, `GlassTextField`, `GlassTextEditor`, `GlassSectionHeader`, `GlassStatusPill`, `GlassDivider`, and `LiquidGlassBackground`.
-- All views redesigned with translucent `.ultraThinMaterial` cards, frosted glass panels, aurora gradient backgrounds, and vibrant gradient accent buttons.
-- Browser extension popup restyled to match the liquid glass aesthetic.
+- `GlassComponents.swift` — design system: `GlassCard`, `GlassPrimaryButtonStyle`, `GlassSecondaryButtonStyle`, `GlassDestructiveButtonStyle`, `GlassTextField`, `GlassTextEditor`, `GlassSectionHeader`, `GlassStatusPill`, `GlassDivider`, `LiquidGlassBackground`.
+- Warm white + burnt orange theme: cream background gradient (`#F9F6F0 → #F2ECE0`), burnt orange primary (`#CC5914`), warm amber secondary (`#F29919`).
+- Browser extension popup restyled to match.
 
 ### 1.6 NowPlaying & Background Audio ✅
 
-- `NowPlayingManager.swift` integrates with `MPNowPlayingInfoCenter` (lock screen metadata) and `MPRemoteCommandCenter` (remote play/pause/stop controls).
+- `NowPlayingManager.swift` integrates with `MPNowPlayingInfoCenter` and `MPRemoteCommandCenter`.
 - `AudioPlayer.swift` uses `.playback` `AVAudioSession` category for background audio.
-- `UIBackgroundModes = audio` declared in `project.pbxproj`.
-- Mini NowPlaying bar floats above the tab bar showing current title, progress bar, and remaining time.
+- `UIBackgroundModes = audio` declared in the project.
+- Mini NowPlaying bar floats above the tab bar with current title, progress, and remaining time.
+
+### 1.7 NowPlaying Full-Screen Sheet ✅
+
+- `NowPlayingSheet.swift` expands from the mini player bar to a full-screen card.
+- Contains playback controls, animated waveform visualiser, and speed controls.
+
+### 1.8 Waveform Visualiser ✅
+
+- Animated bar-chart visualiser implemented in `GlassComponents.swift`.
+- Driven by `AVAudioPlayer.updateMeters()` sampled on a 60 Hz timer.
+
+### 1.9 Chrome Extension (Manifest V3) ✅
+
+Located in `browser-extension/chrome/`.
+
+**User flow:**
+1. User clicks the extension icon while on an article.
+2. Popup shows the page title and an estimated read time.
+3. **▶ Read aloud** → content script extracts the article body and calls the Web Speech API.
+4. **Send to iPhone** button copies the URL to clipboard or triggers a URL scheme.
+
+### 1.10 GitHub Actions CI ✅
+
+- `.github/workflows/ios-build.yml` — builds and unit-tests the iOS app on every push/PR targeting `main`.
+- `.github/workflows/browser-extension-lint.yml` — ESLint + `web-ext lint` on every push/PR.
 
 ---
 
@@ -106,149 +130,269 @@ Replace the single-screen layout with a `TabView`:
 
 - Bundle ID: `<AppBundleID>.ShareExtension`
 - Activation: `NSExtensionActivationSupportsWebURLWithMaxCount = 1`, also `NSExtensionActivationSupportsText`.
-- Shared app group (`group.<AppBundleID>`) so the extension can write a pending URL/text that the host app picks up on next launch.
-- The extension UI shows a minimal "Send to Supertonic TTS" sheet with a **Speak** button.
+- Shared app group (`group.<AppBundleID>`) so the extension writes a pending URL/text the host app picks up on next launch.
+- Minimal "Send to Supertonic TTS" sheet UI with **Speak** and **Add to Queue** buttons.
 
-### 2.2 URL Scheme / Universal Link Integration
+### 2.2 URL Scheme Integration
 
-- Custom scheme `supertonic-tts://speak?url=<encoded-url>` allows Safari / other apps to launch the app directly to the URL tab.
-- `AppDelegate`/`SceneDelegate` handles `openURL` and routes to the URL tab.
+- Custom scheme `supertonic-tts://speak?url=<encoded-url>` allows Safari and other apps to launch directly into the URL tab.
+- `SceneDelegate` handles `openURL` and routes to the appropriate tab.
 
 ---
 
 ## Phase 3 — Browser Extension
 
-### 3.1 Chrome Extension (Manifest V3) ✅
+### 3.1 Chrome Extension ✅
 
-Located in `browser-extension/chrome/`.
-
-```
-browser-extension/chrome/
-├── manifest.json          # MV3 manifest
-├── background.js          # service worker — sends message to content script
-├── content.js             # extracts article text from DOM
-├── popup/
-│   ├── popup.html
-│   ├── popup.js           # "Read this page" button, voice/speed controls
-│   └── popup.css
-└── icons/
-    ├── icon16.png
-    ├── icon48.png
-    └── icon128.png
-```
-
-**User flow:**
-1. User clicks the extension icon while on a news article.
-2. Popup shows the page title and an estimated read time.
-3. User clicks **▶ Read aloud** → the content script extracts the article body and calls the Web Speech API (`SpeechSynthesis`) using the user's selected voice parameters.
-4. An optional **Send to iPhone** button copies the URL to the clipboard and shows instructions (or triggers a native messaging host on macOS).
+See §1.9 above. Complete and ready.
 
 ### 3.2 Safari Web Extension (iOS + macOS)
 
-Located in `browser-extension/safari/`.
+Located in `browser-extension/safari/` (Xcode target, not yet added).
 
 - Built as an Xcode target (`SafariExtension`) inside the main app project.
-- Uses the same JavaScript (`content.js`, `popup.*`) as the Chrome extension via a shared `browser-extension/shared/` directory.
-- On iOS, the extension opens the Supertonic TTS app via the custom URL scheme.
-- On macOS, the extension can communicate with the macOS app target via native messaging.
+- Shares `content.js` / `popup.*` from `browser-extension/shared/`.
+- On iOS, tapping **Send** opens the Supertonic TTS app via the custom URL scheme.
+- Bundled with the iOS app for App Store distribution.
 
 ```
 browser-extension/
 ├── shared/
-│   ├── content.js         # DOM reader (shared between Chrome + Safari)
+│   ├── content.js         # DOM reader (shared)
 │   └── reader.js          # readability helper
-├── chrome/
-│   ├── manifest.json
-│   ├── background.js
-│   ├── popup/
-│   └── icons/
-└── safari/
+├── chrome/                # complete ✅
+└── safari/                # planned ⬜
     ├── SafariExtensionHandler.swift
     ├── SafariExtensionViewController.swift
     └── Resources/
-        ├── manifest.json  # Safari-flavoured MV3
-        └── (symlinks or copies of shared JS)
+        └── manifest.json
 ```
 
-### 3.3 Extension Features
+### 3.3 Extension Feature Matrix
 
 | Feature | Chrome | Safari iOS | Safari macOS |
 |---------|--------|------------|--------------|
 | Read current page aloud (Web Speech API) | ✅ | ✅ | ✅ |
-| Extract article text (Readability-lite) | ✅ | ✅ | ✅ |
+| Extract article text | ✅ | ✅ | ✅ |
 | Send URL to iOS app | via clipboard | URL scheme | URL scheme |
 | Voice / speed controls in popup | ✅ | ✅ | ✅ |
 | Estimated read time | ✅ | ✅ | ✅ |
-| Skip navigation / ads | ✅ | ✅ | ✅ |
-| Background tab reading | ✅ | — | ✅ |
+| Context menu "Read selection" | ⬜ | ⬜ | ⬜ |
+| Extension icon artwork (proper PNG) | ⬜ | ⬜ | ⬜ |
+| Dark mode popup theming | ⬜ | ⬜ | ⬜ |
 
 ---
 
-## Phase 4 — macOS App Target
+## Detailed Improvement Backlog
 
-- Add a macOS (Catalyst or native SwiftUI) target that shares the same Swift source as the iOS app.
-- Exposes a menu bar extra for quick "Read clipboard" / "Read URL" access.
-- Pairs with the Safari macOS extension for native-quality TTS (uses CoreML instead of Web Speech API).
+> Items are ordered roughly by impact and complexity within each category.
+
+### 🎧 Playback & Audio
+
+| ID | Improvement | Details | Priority |
+|----|-------------|---------|---------|
+| P1 | **Pause / resume support** | `AVAudioPlayer` supports `pause()` + `play()` after pause, preserving position. Add `pausePlayback()`. Give `TTSViewModel` a tri-state: `.idle`, `.playing`, `.paused`. Update mini player UI. | High |
+| P2 | **Skip ±15 s controls** | `player.currentTime += 15` / `-= 15`. Register `skipForwardCommand` / `skipBackwardCommand` in `NowPlayingManager`. Show ±buttons in the mini player bar and full-screen sheet. | High |
+| P3 | **Sentence-level highlighting** | Split synthesised text into sentences, align TTS chunk boundaries, highlight the current sentence in the transcript view during playback. | Medium |
+| P4 | **Audio volume normalisation** | Lightweight ITU-R BS.1770 or RMS-clamp pass on each WAV chunk before joining, to prevent sudden loud/quiet segments between sentences. | Medium |
+| P5 | **Sleep timer** | "Stop after N minutes" option in Settings for bedtime reading. | Low |
+| P6 | **Multiple-item queue** | Queue several history items or URLs for sequential playback. | Low |
+
+### 🎨 UI / Design
+
+| ID | Improvement | Details | Priority |
+|----|-------------|---------|---------|
+| U3 | **Haptic feedback** | `UIImpactFeedbackGenerator(.medium)` on Generate, Play, Stop, swipe-to-delete. `UINotificationFeedbackGenerator(.success/.error)` on generation complete/fail. | Medium |
+| U4 | **Dynamic accent colour per voice** | Each voice gets a distinct gradient pair; the background aurora tints shift to match. | Low |
+| U5 | **Animated generation progress** | Replace the plain `ProgressView` with a pulsing waveform that cycles through pipeline stages (DP → TE → VE → Voc) using named callbacks from `TTSService`. | Medium |
+| U7 | **Landscape layout** | Optimise `ReadView` so the text editor and controls sit side-by-side in landscape instead of stacked. | Low |
+| U8 | **Widget extension** | Home Screen widget showing the last-read title with a ▶ deep-link button. | Low |
+
+### 🔗 Content & Networking
+
+| ID | Improvement | Details | Priority |
+|----|-------------|---------|---------|
+| C2 | **PDF support** | Detect `application/pdf`; use `PDFKit` to extract text page-by-page. Feed concatenated text to the TTS pipeline. Show a PDF badge in the URL tab. | Medium |
+| C3 | **RSS / podcast feed** | Parse RSS 2.0 / Atom feeds, present episodes as speakable items in a "Feed" sub-view under the URL tab. | Low |
+| C4 | **Batch URL import** | Accept a plain-text file (one URL per line) via Files app or Share Extension; enqueue all articles. | Low |
+| C5 | **Article caching** | Cache extracted text keyed by URL (TTL 24 h) in the Caches directory so re-reads skip the network. | Medium |
+
+### 🧠 TTS & Model
+
+| ID | Improvement | Details | Priority |
+|----|-------------|---------|---------|
+| T1 | **Long-text chunking improvements** | Use `NLTokenizer(.sentence)` instead of naïve splitting; merge short sentences (< 20 chars); add 400 ms silence on paragraph boundaries. | High |
+| T2 | **On-the-fly speed preview** | Scrub the speed slider → immediately re-generate and play the first sentence as a preview. | Medium |
+| T3 | **SSML support** | Honour `<break>`, `<emphasis>`, `<say-as>` tags in input text for expressive prosody control. | Medium |
+| T4 | **Voice download manager** | In-app screen for downloading additional voice packages with progress and cached-size display. | Low |
+| T5 | **Model cache status** | "Model info" badge in Settings showing which models are compiled and cached on-device. | Low |
+
+### 📂 History & Data
+
+| ID | Improvement | Details | Priority |
+|----|-------------|---------|---------|
+| H1 | **iCloud sync for history** | Mirror `HistoryItem` records to CloudKit private database so history persists across restores and syncs across devices. Audio files stored as `CKAsset`. | High |
+| H2 | **Export audio as MP3 / M4B** | Export button per history row and in the NowPlaying sheet. Format picker: **MP3** (standard compatibility) or **M4B** (MPEG-4 audiobook with chapter markers, cover art, and metadata — ideal for long-form content). Implementation: `AVAssetWriter` with `AVFileTypeAppleM4A` (renamed `.m4b`) for M4B; `AVAudioConverter` with `kAudioFormatMPEGLayer3` (iOS 17+) for MP3. Hand off via `ShareLink` / `UIActivityViewController`. | High |
+| H3 | **Full-text search in history** | `List` with `.searchable()` modifier filtering on `HistoryItem.title` and full text. | Medium |
+| H4 | **Grouped history by date** | Section headers: "Today", "Yesterday", "This week", "Older". | Low |
+| H5 | **Playback resume position** | Store last `player.currentTime` in `HistoryItem`; resume mid-audio on replay. | Medium |
+| H6 | **Delete confirmation dialog** | `.confirmationDialog` before permanently deleting a history item and its audio file. | Low |
+
+### 🔒 Privacy & Security
+
+| ID | Improvement | Details | Priority |
+|----|-------------|---------|---------|
+| S1 | **Privacy Nutrition Label (`PrivacyInfo.xcprivacy`)** | Declare `NSPrivacyAccessedAPICategoryUserDefaults` and `NSPrivacyAccessedAPICategoryFileTimestamp`. Required for App Store submission. | High |
+| S2 | **Certificate pinning for article fetches** | Optional toggle in Settings; pins known news-site CAs via `URLSession` delegate. | Low |
+| S3 | **Clipboard access justification** | Add `NSPasteboardUsageDescription` and audit that all clipboard reads are user-triggered. | Medium |
+
+### 🧪 Testing & CI
+
+| ID | Improvement | Details | Priority |
+|----|-------------|---------|---------|
+| Q1 | **Unit tests for `URLTextFetcher`** | Fixture HTML files (news article, paywalled page, blog post, minimal content). Assert `extractReadableText` returns expected plain text. | High |
+| Q2 | **Unit tests for `HistoryManager`** | Test `add`, `remove`, `clearAll`, persistence round-trip, 50-item cap. | High |
+| Q3 | **Snapshot tests for glass components** | Use `swift-snapshot-testing` to prevent visual regressions in the design system. | Medium |
+| Q4 | **UI tests (happy path)** | `XCUITest` flow: type text → Generate → wait → Play → assert mini player visible. | Medium |
+
+### 🌐 Browser Extension
+
+| ID | Improvement | Details | Priority |
+|----|-------------|---------|---------|
+| B1 | **Safari Web Extension target** | Add Xcode target using `safari-web-extension-converter` scaffold + shared JS. Generates `.appex` embedded in the iOS app bundle. | High |
+| B3 | **Context menu "Read selection"** | Context-menu item in Chrome and Safari that reads only the highlighted text. | Medium |
+| B4 | **Extension icon artwork** | Replace placeholder emoji icons with 16 / 48 / 128 px PNG assets matching the iOS app icon gradient. | High |
+| B5 | **Dark mode popup theming** | `prefers-color-scheme: dark` variant in `popup.css` so the popup adapts to the browser's theme. | Medium |
 
 ---
 
-## Phase 5 — Polish & Distribution
+## Comprehensive Improvement Plan
 
-### 5.1 Playback Controls ✅ (partial)
-- Lock-screen / Control Centre `NowPlaying` metadata. ✅
-- Background audio (`UIBackgroundModes: audio`). ✅
-- Mini player bar with progress and remaining time. ✅
-- Skip-forward 30 s / rewind 15 s. ⬜
-- Sentence-level progress indicator in the UI. ⬜
-
-### 5.2 Accessibility
-- VoiceOver labels on all controls.
-- Dynamic type support.
-- High-contrast mode support.
-
-### 5.3 App Store Submission
-- Privacy manifest (`PrivacyInfo.xcprivacy`): microphone not used; no analytics.
-- App Review notes: TTS is on-device; no external data leaving device except user-initiated URL fetches.
-- `NSAppTransportSecurity` allows arbitrary URL loads for article fetching (or scoped exceptions per domain).
+> Structured execution plan with phased targets, success criteria, and implementation strategy.
 
 ---
 
-## GitHub Actions CI/CD
+### Phase A — Playback & Stability Foundation
+**Target: 6–8 weeks | Goal: App feels solid enough for daily personal use**
 
-All macOS/iOS build steps run on `macos-latest` runners.
+#### A1 — True Pause/Resume (P1)
+**Why:** Stopping and losing position is a deal-breaker for long articles.  
+**How:** Tri-state `TTSViewModel` enum (`.idle`, `.playing`, `.paused`). Replace `player.stop()` with `player.pause()` in `pausePlayback()`. Register `MPRemoteCommandCenter` pause/play commands correctly.
 
-### Workflow: `.github/workflows/ios-build.yml`
+#### A2 — Skip Controls (P2)
+**Why:** 15 s rewind / skip-forward is the standard for read-aloud apps.  
+**How:** `skipBackwardCommand` + `skipForwardCommand` in `NowPlayingManager`. ±buttons in mini player and full-screen sheet.
 
-```yaml
-trigger: push to main, PR targeting main
-jobs:
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - checkout
-      - select Xcode (latest stable)
-      - xcodebuild -scheme supertonic2-coreml-ios-test
-                   -destination 'platform=iOS Simulator,name=iPhone 16'
-                   clean build test
-      - upload test results artifact
-  build-macos:          # future
-    runs-on: macos-latest
-    steps:
-      - build macOS target (when added)
-```
+#### A3 — Sentence-Aware Text Chunking (T1)
+**Why:** Current chunking can clip mid-sentence, creating jarring audio joins.  
+**How:** `NLTokenizer(.sentence)` pass in `TTSService`. Merge short sentences (< 20 chars). Extra 400 ms silence on double-newline paragraph boundaries.
 
-### Workflow: `.github/workflows/browser-extension-lint.yml`
+#### A4 — Privacy Nutrition Label (S1)
+**Why:** Required for App Store submission.  
+**How:** Add `PrivacyInfo.xcprivacy`. Audit clipboard reads.
 
-```yaml
-trigger: push / PR
-jobs:
-  lint-extension:
-    runs-on: ubuntu-latest
-    steps:
-      - checkout
-      - npm ci (in browser-extension/chrome)
-      - eslint + web-ext lint
-```
+**Phase A exit criteria:** Pause/resume preserves position; skip controls on lock screen; no audible mid-sentence breaks; `PrivacyInfo.xcprivacy` passes App Store validation.
+
+---
+
+### Phase B — Content & Export
+**Target: 4–6 weeks | Goal: The app handles any content and lets users keep what they hear**
+
+#### B1 — PDF Support (C2)
+**Why:** Many shared links point to PDFs (papers, reports, ebooks).  
+**How:** Detect `Content-Type: application/pdf`; `PDFKit.PDFDocument` extracts text page-by-page. Add PDF badge to URL tab.
+
+#### B2 — Audio Export: MP3 & M4B (H2)
+**Why:** Users want to keep generated audio for offline listening in podcast apps, car stereos, or as audiobooks.  
+**How:**
+- **MP3:** `AVAudioConverter` with `kAudioFormatMPEGLayer3` (iOS 17+). Fallback: `AVAssetExportSession` to AAC/M4A for older OS.
+- **M4B:** `AVAssetWriter` with `AVFileTypeAppleM4A`; add `AVMetadataItem` for title/artist; insert chapter markers at sentence-chunk boundaries; rename file to `.m4b`. Optionally embed cover art from the article's `og:image`.
+- **UI:** "Export" button (share icon) on each `HistoryView` row and in `NowPlayingSheet`. Format picker (MP3 / M4B) presented as a confirmation sheet. File handed off via `ShareLink` (iOS 16+) or `UIActivityViewController`.
+
+#### B3 — Article Caching (C5)
+**Why:** Re-reading the same URL should be instant.  
+**How:** Cache extracted text in Caches directory keyed by URL SHA-256, TTL 24 h.
+
+#### B4 — Full-Text History Search (H3)
+**Why:** History grows quickly; finding a past item by title is essential.  
+**How:** `.searchable()` modifier on the History `List`.
+
+**Phase B exit criteria:** PDF URLs speak cleanly; History rows have a working Export button; MP3 and M4B files open correctly in Files and third-party players; cached articles skip the network on re-read.
+
+---
+
+### Phase C — Platform Breadth
+**Target: 6–8 weeks | Goal: The app reaches Safari and a Share Extension**
+
+#### C1 — Safari Web Extension (B1)
+**Why:** Safari is the default browser for iOS/macOS users.  
+**How:** New Xcode target via `safari-web-extension-converter`. Reuses shared JS. Bundled in the iOS app for App Store distribution.
+
+#### C2 — Share Extension (Phase 2)
+**Why:** Users share articles from Safari directly into the app.  
+**How:** `NSExtension` target matching `kUTTypeURL` + `kUTTypeText`. Minimal card UI; on "Read Now" opens app via URL scheme.
+
+#### C3 — iCloud History Sync (H1)
+**Why:** History should survive device restores.  
+**How:** `CloudKit` private database for `HistoryItem` records. Audio files as `CKAsset`. `CKQuerySubscription` for push-driven sync.
+
+#### C4 — Playback Resume Position (H5)
+**Why:** Users should be able to pause, put the phone down, and resume exactly where they were.  
+**How:** Write `player.currentTime` to `HistoryItem` on pause/stop. Seek to stored position on history replay.
+
+**Phase C exit criteria:** Safari extension installable and functional on iOS; Share Extension opens from Safari; history syncs across two devices within 30 s; replay resumes at last position.
+
+---
+
+### Phase D — Quality & Polish
+**Target: 4 weeks | Goal: Stable, well-tested, polished app**
+
+#### D1 — Test Suite (Q1–Q4)
+- `URLTextFetcherTests` with 6+ fixture HTML files.
+- `HistoryManagerTests` covering add/remove/clear/persist/cap.
+- `GlassComponentSnapshotTests` using `swift-snapshot-testing`.
+- `XCUITest` happy-path flow.
+
+#### D2 — Haptic Feedback (U3)
+Generate/Play/Stop/delete all provide `UIImpactFeedbackGenerator` feedback; success/error use `UINotificationFeedbackGenerator`.
+
+#### D3 — Animated Generation Progress (U5)
+Replace plain `ProgressView` with a pulsing waveform that cycles through pipeline stages using named callbacks from `TTSService`.
+
+#### D4 — Extension Icon Artwork (B4)
+Replace placeholder emoji icons with proper 16 / 48 / 128 px PNG assets.
+
+**Phase D exit criteria:** All tests pass in CI; haptics present throughout the app; generation progress is visually clear; extension has proper branding.
+
+---
+
+### Priority Matrix Summary
+
+| Phase | Timeline | Key Deliverables | Risk |
+|-------|----------|-----------------|------|
+| A — Playback & Stability | 6–8 wks | Pause/resume, skip ±15s, chunking, PrivacyInfo | Low |
+| B — Content & Export | 4–6 wks | PDF, MP3/M4B export, article caching, history search | Medium |
+| C — Platform Breadth | 6–8 wks | Safari extension, Share extension, iCloud sync, resume position | High |
+| D — Quality & Polish | 4 wks | Tests, haptics, animated progress, extension icons | Low |
+
+---
+
+## Milestones
+
+| Milestone | Phase | Status |
+|-----------|-------|--------|
+| M1: Tab UI + URL fetch + History | 1 | ✅ Complete |
+| M1.5: iOS 26 Liquid Glass design | 1 | ✅ Complete |
+| M1.6: NowPlaying + background audio | 1 | ✅ Complete |
+| M1.7: Full-screen NowPlaying sheet | 1 | ✅ Complete |
+| M1.8: Waveform visualiser | 1 | ✅ Complete |
+| M1.9: Chrome extension v1 | 1 | ✅ Complete |
+| M1.10: GitHub Actions CI (iOS + extension) | 1 | ✅ Complete |
+| M2: True pause/resume + skip controls | A | ⬜ Planned |
+| M3: Audio export (MP3 + M4B) | B | ⬜ Planned |
+| M4: Safari extension | C | ⬜ Planned |
+| M5: Share Extension | C | ⬜ Planned |
+| M6: iCloud history sync | C | ⬜ Planned |
 
 ---
 
@@ -258,37 +402,37 @@ jobs:
 supertonic-2-coreml/
 ├── .github/
 │   └── workflows/
-│       ├── ios-build.yml
-│       └── browser-extension-lint.yml
+│       ├── ios-build.yml              ✅
+│       └── browser-extension-lint.yml ✅
 ├── browser-extension/
 │   ├── shared/
 │   │   ├── content.js
 │   │   └── reader.js
-│   ├── chrome/
+│   ├── chrome/                        ✅
 │   │   ├── manifest.json
 │   │   ├── background.js
 │   │   ├── popup/
-│   │   │   ├── popup.html
-│   │   │   ├── popup.js
-│   │   │   └── popup.css
 │   │   └── icons/
-│   └── safari/          # Xcode references these
+│   └── safari/                        ⬜ planned
 ├── docs/
 │   ├── tts-app-roadmap.md   ← this file
+│   ├── release-checklist.md
 │   ├── compatibility-matrix.md
 │   └── quant-matrix.md
 ├── supertonic2-coreml-ios-test/
-│   ├── ContentView.swift           # tab-based UI + mini NowPlaying bar
-│   ├── TTSViewModel.swift          # URL fetch + history + NowPlaying
+│   ├── ContentView.swift              # tab UI + mini NowPlaying bar
+│   ├── TTSViewModel.swift             # URL fetch + history + NowPlaying
 │   ├── TTSService.swift
-│   ├── AudioPlayer.swift           # background audio + progress callbacks
-│   ├── URLTextFetcher.swift
+│   ├── AudioPlayer.swift              # background audio + progress callbacks
+│   ├── AudioExporter.swift            # ⬜ planned — MP3 / M4B export
+│   ├── URLTextFetcher.swift           # URLSession + WKWebView fallback
 │   ├── HistoryManager.swift
 │   ├── HistoryView.swift
 │   ├── URLInputView.swift
+│   ├── NowPlayingSheet.swift          # full-screen NowPlaying
 │   ├── SettingsView.swift
-│   ├── GlassComponents.swift       # iOS 26 liquid glass design system
-│   ├── NowPlayingManager.swift     # MPNowPlayingInfoCenter integration
+│   ├── GlassComponents.swift          # iOS 26 liquid glass design system
+│   ├── NowPlayingManager.swift        # MPNowPlayingInfoCenter
 │   └── MemoryUsage.swift
 └── supertonic2-coreml-ios-test.xcodeproj/
 ```
@@ -299,124 +443,8 @@ supertonic-2-coreml/
 
 | # | Question | Recommendation |
 |---|----------|----------------|
-| 1 | Use `SwiftData` (iOS 17+) or JSON for history? | JSON for iOS 15 compat |
-| 2 | Article extraction: pure Swift or embed Mozilla Readability.js via WKWebView? | Pure Swift first; add JS bridge if needed |
-| 3 | Chrome extension TTS: Web Speech API or proxy to device? | Web Speech API for desktop; URL-scheme handoff for iOS |
-| 4 | Code-sign identity for GitHub Actions builds? | Use self-signed for simulator; distribution cert via Secrets for device builds |
-| 5 | Safari extension: separate app or embedded target? | Embedded as app extension target |
-
----
-
-## Milestones
-
-| Milestone | Target | Status |
-|-----------|--------|--------|
-| M1: Tab UI + URL fetch + History | Phase 1 | ✅ Complete |
-| M1.5: iOS 26 Liquid Glass design | Phase 1 | ✅ Complete |
-| M1.6: NowPlaying + background audio | Phase 5 | ✅ Complete |
-| M2: Share Extension skeleton | Phase 2 | ⬜ Planned |
-| M3: Chrome extension v1 | Phase 3 | ✅ Complete |
-| M4: Safari extension | Phase 3.2 | ⬜ Planned |
-| M5: macOS target | Phase 4 | ⬜ Planned |
-| M6: Skip-forward / rewind controls | Phase 5 | ⬜ Planned |
-| M7: App Store submission | Phase 5.3 | ⬜ Planned |
-
----
-
-## Detailed Improvement Backlog
-
-The following improvements have been identified by reviewing the full codebase. They are ordered roughly by impact and complexity.
-
-### 🎧 Playback & Audio
-
-| ID | Improvement | Details | Priority |
-|----|-------------|---------|---------|
-| P1 | **Pause / resume support** | `AVAudioPlayer` already supports `pause()` and `play()` after pause. Add a dedicated `pausePlayback()` that calls `player.pause()` instead of `stop()`, preserving position. TTSViewModel's `isPlaying` should gain a tri-state: `.idle`, `.playing`, `.paused`. | High |
-| P2 | **Skip-forward 30 s / rewind 15 s** | Add `player.currentTime += 30` / `player.currentTime -= 15` helpers; register `skipForwardCommand` and `skipBackwardCommand` in `NowPlayingManager`. Show forward/back buttons in the mini player bar. | High |
-| P3 | **Sentence-level word highlighting** | Split synthesised text into sentences/words, align timestamps from the TTS model output, and highlight the current sentence in the `ReadView` text editor during playback. | Medium |
-| P4 | **Audio volume normalisation** | Run a lightweight loudness-normalisation pass (ITU-R BS.1770 or simpler RMS clamp) on each WAV chunk before joining, to prevent sudden loud or quiet segments between sentences. | Medium |
-| P5 | **Sleep timer** | Add a "stop after N minutes" option in Settings so the app can be used as a bedtime reader without draining battery. | Low |
-| P6 | **Multiple-item queue** | Allow the user to queue several history items or a batch of URLs for sequential playback without manual interaction. | Low |
-
-### 🎨 UI / Design
-
-| ID | Improvement | Details | Priority |
-|----|-------------|---------|---------|
-| U1 | **Full-screen Now Playing sheet** | Tapping the mini player bar expands to a full-screen card showing waveform visualisation, cover art, skip controls, speed picker, and text transcript. | High |
-| U2 | **Waveform visualiser** | Real-time waveform or spectrum bars during playback, driven by `AVAudioPlayer`'s `updateMeters()` and drawn with SwiftUI `Canvas` or `Path`. | Medium |
-| U3 | **Haptic feedback** | `UIImpactFeedbackGenerator` (.medium) on Generate, Play, Stop, and swipe-to-delete. `UINotificationFeedbackGenerator` (.success/.error) on generation success/failure. | Medium |
-| U4 | **Dynamic accent colour per voice** | Assign each voice a distinct gradient pair; the app background aurora blob tints shift to match the selected voice. | Low |
-| U5 | **Animated generation progress** | Replace the plain `ProgressView` spinner with a custom pulsing waveform animation that cycles through the four pipeline stages (DP → TE → VE → Voc) using named progress callbacks from `TTSService`. | Medium |
-| U6 | **iPad multi-column layout** | On iPad, use a `NavigationSplitView` (iOS 16+) with the sidebar for Read/URL/History and a detail pane for the current item and playback controls. | Medium |
-| U7 | **Landscape layout** | Optimise `ReadView` for landscape so the text editor and controls sit side-by-side instead of stacked. | Low |
-| U8 | **Widget extension** | Home Screen widget showing the last read title with a ▶ deep-link button. | Low |
-
-### 🔗 Content & Networking
-
-| ID | Improvement | Details | Priority |
-|----|-------------|---------|---------|
-| C1 | **WKWebView Readability fallback** | For paywalled or JS-rendered pages where the plain HTTP fetch returns little text, fall back to loading the URL in a headless `WKWebView` and injecting Mozilla's Readability.js. | High |
-| C2 | **PDF support** | Detect `application/pdf` responses; use `PDFKit` to extract text page-by-page and pass to the TTS pipeline. | Medium |
-| C3 | **RSS / podcast feed** | Parse RSS 2.0 / Atom feeds from a given URL and present episodes as speakable items in a dedicated "Feed" sub-view under the URL tab. | Low |
-| C4 | **Batch URL import** | Accept a plain-text file containing one URL per line (via the Files app or Share Extension) and enqueue all articles. | Low |
-| C5 | **Caching fetched articles** | Cache the extracted text (keyed by URL, TTL 24 h) in the app's Caches directory so re-reads skip the network request. | Medium |
-
-### 🧠 TTS & Model
-
-| ID | Improvement | Details | Priority |
-|----|-------------|---------|---------|
-| T1 | **Long-text chunking improvements** | Current chunking is sentence-based; add paragraph-aware chunking to avoid splitting mid-sentence and improve prosody across paragraph boundaries. | High |
-| T2 | **On-the-fly speed preview** | Allow the user to scrub the speed slider and immediately hear a short re-generated preview (e.g. the first sentence) without re-processing the full text. | Medium |
-| T3 | **SSML support** | Honour a small subset of SSML (`<break>`, `<emphasis>`, `<say-as>`) typed or detected in the input text to give the user expressive control over prosody. | Medium |
-| T4 | **Voice download manager** | If additional voice packages ship separately, provide an in-app download screen that shows available voices, download progress, and cached sizes. | Low |
-| T5 | **Offline model caching status** | Add a "Model info" badge in Settings showing which models are compiled and cached on-device vs. need recompilation. | Low |
-
-### 📂 History & Data
-
-| ID | Improvement | Details | Priority |
-|----|-------------|---------|---------|
-| H1 | **iCloud sync for history** | Mirror `HistoryItem` records to `NSUbiquitousKeyValueStore` (small payload) or CloudKit so history persists across device restores and shares across user's devices. | High |
-| H2 | **Export history item as audio file** | "Share" button on each history row that triggers `UIActivityViewController` with the `.wav` audio file, allowing AirDrop/Files export. | Medium |
-| H3 | **Full-text search in history** | `List` with a `searchable()` modifier filtering on `HistoryItem.title` and `HistoryItem.fullText`. | Medium |
-| H4 | **Grouped history by date** | Group rows by "Today", "Yesterday", "This week", "Older" sections with section headers. | Low |
-| H5 | **Playback resume position** | Store the last playback `currentTime` in `HistoryItem` so the user can resume mid-audio rather than restarting from the beginning. | Medium |
-
-### 🔒 Privacy & Security
-
-| ID | Improvement | Details | Priority |
-|----|-------------|---------|---------|
-| S1 | **Privacy Nutrition Label (`PrivacyInfo.xcprivacy`)** | Declare accessed API categories: `NSPrivacyAccessedAPICategoryUserDefaults`, `NSPrivacyAccessedAPICategoryFileTimestamp`. Required for App Store submission from Spring 2024. | High |
-| S2 | **Certificate pinning for article fetches** | Optional toggle in Settings; pins a set of well-known news-site CAs using `URLSession`'s `urlSession(_:didReceive:completionHandler:)` delegate. | Low |
-| S3 | **Clipboard access justification** | Add `NSPasteboardUsageDescription` (for macOS Catalyst) and audit that clipboard reads are only triggered by explicit user action (no background reads). | Medium |
-
-### 🧪 Testing & CI
-
-| ID | Improvement | Details | Priority |
-|----|-------------|---------|---------|
-| Q1 | **Unit tests for `URLTextFetcher`** | Supply a set of fixture HTML files (news article, paywalled page, blog post) and assert that `extractReadableText` returns the expected plain text. | High |
-| Q2 | **Unit tests for `HistoryManager`** | Test `add`, `remove`, `clearAll`, persistence round-trip, and the 50-item cap. | High |
-| Q3 | **Snapshot tests for glass components** | Use `swift-snapshot-testing` to prevent visual regressions in `GlassCard`, `GlassPrimaryButtonStyle`, and other design-system components. | Medium |
-| Q4 | **UI tests for the happy path** | `XCUITest` flow: type text → tap Generate → wait for audio → tap Play → assert mini player visible. | Medium |
-| Q5 | **GitHub Actions iOS simulator build** | Implement the `ios-build.yml` workflow described above to gate PRs on a clean simulator build + unit tests. | High |
-| Q6 | **Browser extension lint CI** | Implement `browser-extension-lint.yml` using `web-ext lint` to catch manifest errors and ESLint violations. | Medium |
-
-### 🌐 Browser Extension
-
-| ID | Improvement | Details | Priority |
-|----|-------------|---------|---------|
-| B1 | **Safari Web Extension target** | Add the Safari extension Xcode target using the same shared JS. Generates a `.appex` embedded in the iOS app bundle. | High |
-| B2 | **Reading progress sync** | When the iOS app is active on the same Wi-Fi as the Mac, broadcast playback progress back to the Chrome extension via a local WebSocket so the extension icon shows a progress ring. | Low |
-| B3 | **Context menu "Read selection"** | Add a context-menu item in both Chrome and Safari that reads only the highlighted text rather than the full article. | Medium |
-| B4 | **Extension icon artwork** | Replace the placeholder emoji icons with proper 16 / 48 / 128 px PNG assets matching the iOS app icon gradient. | High |
-| B5 | **Dark mode theming** | Add a `prefers-color-scheme: light` variant to `popup.css` so the extension popup adapts when the browser is in light mode. | Medium |
-
-### 📦 Distribution
-
-| ID | Improvement | Details | Priority |
-|----|-------------|---------|---------|
-| D1 | **App Store Connect metadata** | Screenshots (6.7", 6.1", 12.9" iPad), app preview video, keyword research, localised descriptions (EN, ES, FR, KO, PT). | High |
-| D2 | **TestFlight beta** | Set up internal testing group; automate `.ipa` upload via `xcodebuild -exportArchive` + `altool` in GitHub Actions on push to `release/*`. | High |
-| D3 | **Chrome Web Store listing** | Prepare store tile, description, screenshots, and privacy policy URL for the Chrome extension submission. | Medium |
-
-
----
+| 1 | MP3 export: `AVAudioConverter` (iOS 17+) or always output M4A/AAC? | Default M4B; offer MP3 only on iOS 17+; show "Requires iOS 17" note otherwise |
+| 2 | M4B chapter markers: per article chunk or per paragraph? | Per article chunk (each TTS segment = one chapter) |
+| 3 | iCloud sync: `NSUbiquitousKeyValueStore` (simple) or `CloudKit` (full)? | `CloudKit` — supports large audio `CKAsset`; KV store has 1 MB total limit |
+| 4 | Safari extension: scaffold with `safari-web-extension-converter` or write from scratch? | Use converter on existing Chrome extension as the starting point |
+| 5 | Article extraction: current WKWebView fallback sufficient or add Readability.js? | Add minified Readability.js injection to WKWebView path for better article parsing |
