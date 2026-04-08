@@ -59,6 +59,8 @@ final class HistoryManager: ObservableObject {
     @Published private(set) var items: [HistoryItem] = []
 
     private static let maxItems = 50
+    /// Re-entrancy guard: prevents save → push → merge → save loops.
+    private var isMerging = false
 
     nonisolated static var audioDirectory: URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -74,6 +76,7 @@ final class HistoryManager: ObservableObject {
 
     private init() {
         load()
+        mergeFromCloud()
     }
 
     // MARK: - Public API
@@ -140,6 +143,10 @@ final class HistoryManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(items)
             try data.write(to: storageURL, options: .atomic)
+            // Push the updated list to iCloud (skip during a merge to avoid loops).
+            if !isMerging {
+                CloudSyncManager.shared.push(items: items)
+            }
         } catch {
             print("HistoryManager save error: \(error)")
         }
@@ -153,5 +160,37 @@ final class HistoryManager: ObservableObject {
         } catch {
             print("HistoryManager load error: \(error)")
         }
+    }
+
+    // MARK: - iCloud Sync
+
+    /// Merge items received from iCloud KV store into the local list.
+    /// Strategy: union by UUID, sort by date descending, cap at maxItems.
+    func mergeFromCloud() {
+        guard !isMerging else { return }
+        guard let cloudItems = CloudSyncManager.shared.pull(), !cloudItems.isEmpty else { return }
+
+        isMerging = true
+        defer { isMerging = false }
+
+        // Build a dictionary of current local items keyed by id.
+        var merged: [UUID: HistoryItem] = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+
+        for cloudItem in cloudItems {
+            // Only add items not already present locally; never overwrite local data
+            // (local resume positions and audio files take precedence).
+            if merged[cloudItem.id] == nil {
+                merged[cloudItem.id] = cloudItem
+            }
+        }
+
+        // Sort by date descending, cap at maxItems.
+        let sorted = merged.values
+            .sorted { $0.date > $1.date }
+            .prefix(Self.maxItems)
+
+        items = Array(sorted)
+        // Persist the merged list locally (isMerging=true so push is skipped).
+        save()
     }
 }
