@@ -1,0 +1,190 @@
+version: 2.1
+
+# ---------------------------------------------------------------------------
+# Orbs
+# ---------------------------------------------------------------------------
+orbs:
+  node: circleci/node@5.2
+
+# ---------------------------------------------------------------------------
+# Jobs
+# ---------------------------------------------------------------------------
+jobs:
+
+  # -------------------------------------------------------------------------
+  # iOS: build for simulator, run unit tests, produce unsigned IPA
+  # -------------------------------------------------------------------------
+  ios-build-test:
+    macos:
+      xcode: "16.2.0"
+    resource_class: macos.m1.medium.gen1
+    environment:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+
+    steps:
+      - checkout
+
+      # Git LFS — required for *.mlpackage / *.onnx / *.bin / *.wav
+      - run:
+          name: Install & pull Git LFS objects
+          command: |
+            brew install git-lfs
+            git lfs install
+            git lfs pull
+
+      # xcpretty formats xcodebuild output and can emit JUnit XML
+      - run:
+          name: Install xcpretty
+          command: gem install xcpretty --no-document
+
+      - run:
+          name: Xcode version
+          command: xcodebuild -version
+
+      - run:
+          name: Resolve Swift package dependencies
+          command: |
+            xcodebuild \
+              -project supertonic2-coreml-ios-test.xcodeproj \
+              -scheme "supertonic2-coreml-ios-test" \
+              -resolvePackageDependencies \
+            || true
+
+      # ------------------------------------------------------------------
+      # Debug build for iOS Simulator
+      # ------------------------------------------------------------------
+      - run:
+          name: Build for iOS Simulator (Debug)
+          command: |
+            mkdir -p /tmp/ci-logs
+            set -o pipefail
+            xcodebuild \
+              -project supertonic2-coreml-ios-test.xcodeproj \
+              -scheme "supertonic2-coreml-ios-test" \
+              -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" \
+              -configuration Debug \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              ONLY_ACTIVE_ARCH=YES \
+              clean build \
+              | tee /tmp/ci-logs/xcodebuild.log \
+              | xcpretty --color --simple
+
+      # ------------------------------------------------------------------
+      # Unit tests  — emit JUnit XML for CircleCI test insights
+      # ------------------------------------------------------------------
+      - run:
+          name: Run unit tests
+          command: |
+            mkdir -p /tmp/ci-logs /tmp/test-results
+            set -o pipefail
+            xcodebuild test \
+              -project supertonic2-coreml-ios-test.xcodeproj \
+              -scheme "supertonic2-coreml-ios-testTests" \
+              -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" \
+              -configuration Debug \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              | tee /tmp/ci-logs/xcodebuild-tests.log \
+              | xcpretty --color --simple \
+                  --report junit \
+                  --output /tmp/test-results/results.xml
+
+      - store_test_results:
+          path: /tmp/test-results
+
+      # ------------------------------------------------------------------
+      # Release archive → unsigned IPA
+      # ------------------------------------------------------------------
+      - run:
+          name: Archive (Release) for generic iOS device
+          command: |
+            set -o pipefail
+            xcodebuild archive \
+              -project supertonic2-coreml-ios-test.xcodeproj \
+              -scheme "supertonic2-coreml-ios-test" \
+              -destination "generic/platform=iOS" \
+              -archivePath /tmp/supertonic2.xcarchive \
+              -configuration Release \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              | tee /tmp/ci-logs/xcodebuild-archive.log \
+              | xcpretty --color --simple
+
+      - run:
+          name: Package unsigned IPA
+          command: |
+            APP_PATH=$(find /tmp/supertonic2.xcarchive/Products -name "*.app" | head -1)
+            mkdir -p /tmp/ipa-payload/Payload
+            cp -r "$APP_PATH" /tmp/ipa-payload/Payload/
+            cd /tmp/ipa-payload
+            zip -r /tmp/supertonic2-unsigned.ipa Payload
+
+      # ------------------------------------------------------------------
+      # Artifacts — always upload even on failure so logs are available
+      # ------------------------------------------------------------------
+      - store_artifacts:
+          path: /tmp/ci-logs
+          destination: logs
+
+      - store_artifacts:
+          path: /tmp/supertonic2-unsigned.ipa
+          destination: supertonic2-unsigned.ipa
+
+
+  # -------------------------------------------------------------------------
+  # Browser extension: ESLint + web-ext manifest validation
+  # -------------------------------------------------------------------------
+  browser-extension-lint:
+    docker:
+      - image: cimg/node:20.11
+    resource_class: small
+
+    steps:
+      - checkout
+
+      - node/install-packages:
+          pkg-manager: npm
+          app-dir: browser-extension/chrome
+
+      - run:
+          name: ESLint
+          working_directory: browser-extension/chrome
+          command: npm run lint
+
+      - run:
+          name: web-ext manifest validation (Chrome)
+          working_directory: browser-extension/chrome
+          command: npx web-ext lint --source-dir .
+
+
+# ---------------------------------------------------------------------------
+# Workflows
+# ---------------------------------------------------------------------------
+workflows:
+
+  # Runs on every push to main and every PR targeting main
+  ios:
+    jobs:
+      - ios-build-test:
+          filters:
+            branches:
+              only:
+                - main
+            tags:
+              only: /^v.*/
+
+  # Runs on every push/PR — mirrors the GitHub Actions path filter by being
+  # cheap enough ($0.006/min on `small`) to always run.
+  browser-extension:
+    jobs:
+      - browser-extension-lint:
+          filters:
+            branches:
+              only:
+                - main
+            tags:
+              only: /^v.*/

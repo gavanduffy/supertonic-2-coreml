@@ -6,10 +6,9 @@
 //
 
 import Foundation
-import Combine
 
 @MainActor
-final class TTSViewModel: ObservableObject {
+@Observable final class TTSViewModel {
     enum ModelLoadReason: String {
         case warmup
         case onDemand
@@ -58,36 +57,36 @@ final class TTSViewModel: ObservableObject {
         let language: TTSService.Language
     }
 
-    @Published var text: String = "This is Supertonic 2 running on Core ML with int8 weights, tuned for faster inference on older iPhones."
-    @Published var selectedVoice: String = "F1"
-    @Published var language: TTSService.Language = .en
-    @Published var steps: Int = 20
-    @Published var speed: Double = 1.05
-    @Published var silenceSeconds: Double = 0.3
-    @Published var computeUnits: TTSService.ComputeUnits = .all
+    var text: String = "This is Supertonic 2 running on Core ML with int8 weights, tuned for faster inference on older iPhones."
+    var selectedVoice: String = "F1"
+    var language: TTSService.Language = .en
+    var steps: Int = 20
+    var speed: Double = 1.05
+    var silenceSeconds: Double = 0.3
+    var computeUnits: TTSService.ComputeUnits = .all
     /// The URL that was used to populate the current text (if any).
-    @Published var sourceURL: String?
+    var sourceURL: String?
 
-    @Published var isGenerating: Bool = false
-    @Published var isPlaying: Bool = false
-    @Published var isPaused: Bool = false
-    @Published var isLoadingModels: Bool = false
-    @Published var errorMessage: String?
-    @Published var metrics: Metrics?
-    @Published var audioURL: URL?
-    @Published var availableVoices: [String] = []
-    @Published var modelLoadSeconds: Double?
-    @Published var modelLoadReason: ModelLoadReason?
-    @Published var modelLoadComputeUnits: TTSService.ComputeUnits?
-    @Published var currentLoadReason: ModelLoadReason?
+    var isGenerating: Bool = false
+    var isPlaying: Bool = false
+    var isPaused: Bool = false
+    var isLoadingModels: Bool = false
+    var errorMessage: String?
+    var metrics: Metrics?
+    var audioURL: URL?
+    var availableVoices: [String] = []
+    var modelLoadSeconds: Double?
+    var modelLoadReason: ModelLoadReason?
+    var modelLoadComputeUnits: TTSService.ComputeUnits?
+    var currentLoadReason: ModelLoadReason?
     /// Current playback title shown in the mini NowPlaying bar.
-    @Published var nowPlayingTitle: String = ""
+    var nowPlayingTitle: String = ""
     /// Playback progress 0–1.
-    @Published var playbackProgress: Double = 0
+    var playbackProgress: Double = 0
     /// Remaining seconds of current audio.
-    @Published var playbackRemaining: Double = 0
+    var playbackRemaining: Double = 0
     /// Normalised meter levels [0…1] per channel, updated every 0.5 s while playing.
-    @Published var meterLevels: [Float] = []
+    var meterLevels: [Float] = []
 
     let samples: [SamplePrompt] = [
         SamplePrompt(

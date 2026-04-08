@@ -5,7 +5,6 @@
 //  Persists recent TTS items so the user can replay past readings.
 //
 
-import Combine
 import Foundation
 import SwiftUI
 
@@ -53,10 +52,10 @@ struct HistoryItem: Identifiable, Codable {
 }
 
 @MainActor
-final class HistoryManager: ObservableObject {
+@Observable final class HistoryManager {
     static let shared = HistoryManager()
 
-    @Published private(set) var items: [HistoryItem] = []
+    private(set) var items: [HistoryItem] = []
 
     private static let maxItems = 50
     /// Re-entrancy guard: prevents save → push → merge → save loops.
